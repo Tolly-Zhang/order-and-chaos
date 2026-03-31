@@ -1,0 +1,72 @@
+BasedOnStyle: LLVM
+
+# Indentation
+IndentWidth: 4
+
+# Max line width before wrapping kicks in. 0 = no limit.
+ColumnLimit: 80
+
+# Where the * goes in pointer declarations.
+#   Left    →  int* p
+#   Right   →  int *p
+#   Middle  →  int * p
+PointerAlignment: Left
+
+# What happens to continuation lines when args don't fit on one line.
+#   Align        →  align to the opening bracket:
+#                     someLongFunction(arg1,
+#                                      arg2);
+#   DontAlign    →  just use ContinuationIndentWidth (flat indent):
+#                     someLongFunction(arg1,
+#                         arg2);
+#   AlwaysBreak  →  always break after the opening bracket:
+#                     someLongFunction(
+#                         arg1, arg2);
+#   BlockIndent  →  like AlwaysBreak but closing bracket gets its own line:
+#                     someLongFunction(
+#                         arg1, arg2
+#                     );
+AlignAfterOpenBracket: BlockIndent
+
+# Whether { } blocks can be collapsed onto one line.
+#   Never   →  never collapse anything
+#   Empty   →  only collapse truly empty blocks:  void f() {}
+#   Always  →  collapse any short block that fits
+AllowShortBlocksOnASingleLine: Empty
+
+# Whether short functions can be collapsed onto one line.
+#   None       →  never
+#   Empty      →  only empty functions:  void f() {}
+#   Inline     →  only functions inside a class (implies Empty)
+#   InlineOnly →  only functions inside a class, but NOT top-level empty ones
+#   All        →  any function that fits
+AllowShortFunctionsOnASingleLine: Empty
+
+# Whether  if (x) return;  can go on one line.
+#   Never         →  always split
+#   WithoutElse   →  one line only if there's no else branch
+#   OnlyFirstIf   →  one line for the if, but not else-if or else
+#   AllIfsAndElse →  one line for everything including else
+AllowShortIfStatementsOnASingleLine: WithoutElse
+
+# Whether template<...> always gets its own line before the declaration.
+#   No        →  never force a break
+#   MultiLine →  only break if the template<> itself spans multiple lines
+#   Yes       →  always break after template<...>
+AlwaysBreakTemplateDeclarations: Yes
+
+# When args/params don't fit on one line, pack as many per line as possible?
+# false = each arg gets its own line (no bin-packing).
+BinPackArguments: false
+BinPackParameters: false
+
+# Penalty = how hard clang-format tries to AVOID breaking at that point.
+# Higher = more reluctant to break there.
+
+# Cost of breaking before a << operator (e.g. cout << x chains).
+# High value = keep << chains together on one line.
+PenaltyBreakFirstLessLess: 1000
+
+# Cost of breaking a long string literal across lines.
+# Lower value = more willing to split strings.
+PenaltyBreakString: 500

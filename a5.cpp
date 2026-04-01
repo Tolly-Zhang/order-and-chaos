@@ -38,8 +38,8 @@ class GameBoard {
   public:
   private:
     struct PossibleWins {
-        vector<bool> rows{5, false};
-        vector<bool> cols{5, false};
+        vector<bool> rows = vector<bool>(5, false);
+        vector<bool> cols = vector<bool>(5, false);
         bool diag1 = false;
         bool diag2 = false;
     };

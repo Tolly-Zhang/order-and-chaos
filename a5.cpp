@@ -49,12 +49,14 @@ class GameBoard {
 };
 
 class Player {
-  public:
   private:
     enum PlayerType { ORDER, CHAOS };
     const string name;
     const char symbol;
     const PlayerType type;
+
+  public:
+    Player(const string& name, char symbol, PlayerType type) : name(name), symbol(symbol), type(type) {}
 };
 
 class Human : public Player {

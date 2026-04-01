@@ -30,10 +30,52 @@
 // We want to see your own work.
 //
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
-int main()
-{
-    cout << "Order versus Chaos ...\n";
-} // main
+class GameBoard {
+  public:
+  private:
+    struct PossibleWins {
+        vector<bool> rows{5, false};
+        vector<bool> cols{5, false};
+        bool diag1 = false;
+        bool diag2 = false;
+    };
+
+    vector<vector<int>>* board;
+    PossibleWins* possible_wins;
+};
+
+class Player {
+  public:
+  private:
+    enum PlayerType { ORDER, CHAOS };
+    const string name;
+    const char symbol;
+    const PlayerType type;
+};
+
+class Human : public Player {
+  public:
+  private:
+};
+
+class Computer : public Player {
+  public:
+  private:
+};
+
+class Game {
+  public:
+  private:
+    enum GameState {};
+
+    GameBoard* game_board = new GameBoard();
+    GameState game_state;
+    Player* player1;
+    Player* player2;
+};
+
+int main() {} // main

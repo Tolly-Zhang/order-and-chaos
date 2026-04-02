@@ -44,8 +44,8 @@ class GameBoard {
         bool diag2 = false;
     };
 
-    vector<vector<int>>* board;
-    PossibleWins* possible_wins;
+    vector<vector<int>> board;
+    PossibleWins possible_wins;
 };
 
 class Player {
@@ -87,7 +87,7 @@ class Game {
   private:
     enum GameState {};
 
-    GameBoard* game_board = new GameBoard();
+    GameBoard game_board;
     GameState game_state;
     Player* player1;
     Player* player2;

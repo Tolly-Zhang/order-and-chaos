@@ -57,6 +57,18 @@ class GameBoard {
         bool diag2 = false;
 
         Wins(const int n) : rows(n, true), cols(n, true) {}
+
+        bool has_wins() const {
+            for (bool win : rows) {
+                if (win) return true;
+            }
+            for (bool win : cols) {
+                if (win) return true;
+            }
+            return diag1 || diag2;
+        }
+    };
+
     struct SymbolWins {
         Wins o_wins;
         Wins x_wins;

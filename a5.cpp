@@ -48,8 +48,8 @@ enum Cell { E, O, X };
  * placed.
  */
 struct Move {
-    int row;
-    int col;
+    size_t row;
+    size_t col;
     Cell symbol;
 
     /**
@@ -60,7 +60,7 @@ struct Move {
      * @pre r > = 0 && c >= 0
      * @pre s must be either O or X.
      */
-    Move(int r, int c, Cell s) : row(r), col(c), symbol(s) {
+    Move(size_t r, size_t c, Cell s) : row(r), col(c), symbol(s) {
         assert(s == O || s == X);
     }
 };
@@ -83,7 +83,7 @@ class GameBoard {
         bool diag1 = false;
         bool diag2 = false;
 
-        Wins(const int n) : rows(n, true), cols(n, true) {}
+        Wins(const size_t n) : rows(n, true), cols(n, true) {}
 
         /**
          * @brief Checks if there are any winning conditions met for this symbol.
@@ -112,7 +112,7 @@ class GameBoard {
          * @param n The size of the board (number of rows/columns).
          * @pre n > 0
          */
-        SymbolWins(const int n) : o_wins(n), x_wins(n) {}
+        SymbolWins(const size_t n) : o_wins(n), x_wins(n) {}
     };
 
     vector<vector<Cell>> board{};

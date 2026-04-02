@@ -58,8 +58,7 @@ class Player {
     const PlayerType type;
 
   public:
-    Player(const string& name, char symbol, PlayerType type)
-        : name(name), type(type) {}
+    Player(const string& name, PlayerType type) : name(name), type(type) {}
 };
 
 class Human : public Player {

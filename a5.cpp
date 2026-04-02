@@ -36,13 +36,13 @@
 
 using namespace std;
 
-enum CellState { E, O, X };
+enum Cell { E, O, X };
 
 struct Move {
     int row;
     int col;
-    CellState symbol;
-    Move(int r, int c, CellState s) : row(r), col(c), symbol(s) {
+    Cell symbol;
+    Move(int r, int c, Cell s) : row(r), col(c), symbol(s) {
         assert(s == O || s == X);
     }
 };
@@ -58,7 +58,7 @@ class GameBoard {
 
         PossibleWins(const int r, const int c) : rows(r, true), cols(c, true) {}
     };
-    vector<vector<CellState>> board{};
+    vector<vector<Cell>> board{};
     PossibleWins possible_wins;
 };
 

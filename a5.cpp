@@ -37,11 +37,12 @@
 using namespace std;
 /**
  * @brief Represents the state of a cell on the game board.
- * E: Empty cell
- * O: Cell occupied by player O
- * X: Cell occupied by player X
  */
-enum Cell { E, O, X };
+enum Cell {
+    E, ///< Empty cell
+    O, ///< Cell occupied by player O
+    X  ///< Cell occupied by player X
+};
 
 /**
  * @brief Represents a move made by a player, including the row, column, and symbol

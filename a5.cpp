@@ -35,6 +35,8 @@
 
 using namespace std;
 
+enum CellState { E, O, X };
+
 class GameBoard {
   public:
   private:
@@ -46,7 +48,6 @@ class GameBoard {
 
         PossibleWins(const int r, const int c) : rows(r, true), cols(c, true) {}
     };
-    enum CellState { E, O, X };
     vector<vector<CellState>> board{};
     PossibleWins possible_wins;
 };

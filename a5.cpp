@@ -114,23 +114,9 @@ class GameBoard {
         }
     };
 
-    /**
-     * @brief Represents the possible winning conditions for both players (O and X).
-     */
-    struct SymbolWins {
-        Wins o_wins;
-        Wins x_wins;
-
-        /**
-         * @brief Constructs SymbolWins with the given board size.
-         * @param n The size of the board (number of rows/columns).
-         * @pre n > 0
-         */
-        SymbolWins(const size_t n) : o_wins(n), x_wins(n) {}
-    };
-
     vector<vector<Cell>> board{};
-    Wins possible_wins;
+    Wins o_wins;
+    Wins x_wins;
 };
 
 /**

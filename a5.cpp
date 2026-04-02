@@ -29,6 +29,7 @@
 // other libraries or substantial pieces of code from the web or other sources.
 // We want to see your own work.
 //
+#include <array>
 #include <iostream>
 #include <vector>
 
@@ -38,13 +39,13 @@ class GameBoard {
   public:
   private:
     struct PossibleWins {
-        vector<bool> rows = vector<bool>(6, false);
-        vector<bool> cols = vector<bool>(6, false);
+        array<bool, 6> rows{};
+        array<bool, 6> cols{};
         bool diag1 = false;
         bool diag2 = false;
     };
-
-    vector<vector<int>> board;
+    enum CellState { E, O, X };
+    array<array<CellState, 6>, 6> board{};
     PossibleWins possible_wins;
 };
 

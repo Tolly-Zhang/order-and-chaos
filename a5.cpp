@@ -61,7 +61,11 @@ struct Move {
      * @pre r > = 0 && c >= 0
      * @pre s must be either O or X.
      */
-    Move(size_t r, size_t c, Cell s) : row(r), col(c), symbol(s) {
+    Move(size_t r, size_t c, Cell s)
+        : row(max(r, size_t(0))), //
+          col(max(c, size_t(0))), //
+          symbol(s) {
+        assert(r >= 0 && c >= 0);
         assert(s == O || s == X);
     }
 };
@@ -84,7 +88,16 @@ class GameBoard {
         bool diag1 = false;
         bool diag2 = false;
 
-        Wins(const size_t n) : rows(n, true), cols(n, true) {}
+        /**
+         * @brief Constructs Wins with the given board size, initializing all winning
+         * conditions to true (indicating that they are all possible at the start of the
+         * game).
+         */
+        Wins(const size_t n)
+            : rows(max(n, size_t(1)), true), //
+              cols(max(n, size_t(1)), true) {
+            assert(n > 0);
+        }
 
         /**
          * @brief Checks if there are any winning conditions met for this symbol.

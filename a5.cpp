@@ -101,6 +101,9 @@ class Game {
         )";
         cout << instructions;
     }
+
+    void turn(Player& player) {}
+
     Move get_move(Player& player) {}
 
     bool end() {}

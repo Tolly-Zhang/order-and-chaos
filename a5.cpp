@@ -39,13 +39,15 @@ class GameBoard {
   public:
   private:
     struct PossibleWins {
-        array<bool, 6> rows{};
-        array<bool, 6> cols{};
+        vector<bool> rows;
+        vector<bool> cols;
         bool diag1 = false;
         bool diag2 = false;
+
+        PossibleWins(const int r, const int c) : rows(r, true), cols(c, true) {}
     };
     enum CellState { E, O, X };
-    array<array<CellState, 6>, 6> board{};
+    vector<vector<CellState>> board{};
     PossibleWins possible_wins;
 };
 

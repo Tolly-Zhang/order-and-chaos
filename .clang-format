@@ -4,7 +4,7 @@ BasedOnStyle: LLVM
 IndentWidth: 4
 
 # Max line width before wrapping kicks in. 0 = no limit.
-ColumnLimit: 80
+ColumnLimit: 90
 
 # Where the * goes in pointer declarations.
 #   Left    →  int* p

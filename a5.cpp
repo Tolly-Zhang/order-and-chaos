@@ -73,12 +73,11 @@ class Computer : public Player {
 class Game {
   public:
     void startGame() {
-        string instructions =
-            R"(
-      Order and Chaos!
-      Two players take turns placing Os and Xs onto the board.
-      Both players can choose wheter to place an O or and X each turn.
-      Order wins if they can place 5 Xs or Os in a row and Choas wins if they can prevent this
+        string instructions = R"(
+            Welcome to Order and Chaos!
+            In this game, two players take turns placing Os and Xs onto the board.
+            Each turn, both players can choose whether to place an O or and X.
+            Order wins if they can place 5 Xs or Os in a row. Chaos wins if they can prevent this.
       )";
 
         cout << instructions;

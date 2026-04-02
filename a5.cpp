@@ -132,6 +132,8 @@ class Player {
 
   public:
     Player(const string& name, PlayerType type) : name(name), type(type) {}
+
+    virtual Move get_move(){}
 };
 
 /**

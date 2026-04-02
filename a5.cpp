@@ -56,7 +56,7 @@ class GameBoard {
         bool diag1 = false;
         bool diag2 = false;
 
-        PossibleWins(const int r, const int c) : rows(r, true), cols(c, true) {}
+        PossibleWins(const int n) : rows(n, true), cols(n, true) {}
     };
     vector<vector<Cell>> board{};
     PossibleWins possible_wins;

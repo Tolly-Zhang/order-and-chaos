@@ -57,7 +57,13 @@ class GameBoard {
         bool diag2 = false;
 
         Wins(const int n) : rows(n, true), cols(n, true) {}
+    struct SymbolWins {
+        Wins o_wins;
+        Wins x_wins;
+
+        SymbolWins(const int n) : o_wins(n), x_wins(n) {}
     };
+
     vector<vector<Cell>> board{};
     Wins possible_wins;
 };

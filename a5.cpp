@@ -50,16 +50,16 @@ struct Move {
 class GameBoard {
   public:
   private:
-    struct PossibleWins {
+    struct Wins {
         vector<bool> rows;
         vector<bool> cols;
         bool diag1 = false;
         bool diag2 = false;
 
-        PossibleWins(const int n) : rows(n, true), cols(n, true) {}
+        Wins(const int n) : rows(n, true), cols(n, true) {}
     };
     vector<vector<Cell>> board{};
-    PossibleWins possible_wins;
+    Wins possible_wins;
 };
 
 class Player {

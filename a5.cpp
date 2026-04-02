@@ -74,16 +74,26 @@ class Computer : public Player {
 
 class Game {
   public:
-    void startGame() {
+    void play() {
+        bool repeat = true;
+        while (repeat) {
+            start();
+            // ... game loop
+            repeat = end();
+        }
+    }
+    void start() {
         string instructions = R"(
             Welcome to Order and Chaos!
             In this game, two players take turns placing Os and Xs onto the board.
             Each turn, both players can choose whether to place an O or and X.
             Order wins if they can place 5 Xs or Os in a row. Chaos wins if they can prevent this.
       )";
-
         cout << instructions;
     }
+    void move(Player& player) {}
+
+    bool end() {}
 
   private:
     enum GameState {};

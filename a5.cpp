@@ -125,8 +125,8 @@ class GameBoard {
  */
 class Player {
   private:
-    enum PlayerType { ORDER, CHAOS };
     const string name;
+    enum PlayerType { ORDER, CHAOS };
     const PlayerType type;
 
   public:

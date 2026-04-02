@@ -133,7 +133,13 @@ class Player {
   public:
     Player(const string& name, PlayerType type) : name(name), type(type) {}
 
-    virtual Move get_move(){}
+    /**
+     * @brief Gets the player's move based on the current game board state. This is a pure
+     * virtual function that must be implemented by derived classes (Human and Computer).
+     * @param game_board The current game board.
+     * @return The move chosen by the player.
+     */
+    virtual Move get_move(GameBoard game_board) const = 0;
 };
 
 /**
@@ -175,9 +181,9 @@ class Game {
         cout << instructions;
     }
 
-    void turn(Player& player) {}
-
-    Move get_move(Player& player) {}
+    void turn(Player& player) {
+        Move move = player.get_move(game_board);
+    }
 
     bool end() {}
 

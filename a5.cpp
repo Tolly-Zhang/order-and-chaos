@@ -35,6 +35,19 @@
 #include <vector>
 
 using namespace std;
+
+struct Validate {
+    inline static size_t vector_size;
+    static size_t size(int n) {
+        assert(n >= 1);
+        return n;
+    }
+    static size_t index(int n) {
+        assert(n >= 0 && n < vector_size);
+        return n;
+    }
+};
+
 /**
  * @brief Represents the state of a cell on the game board.
  */
@@ -63,18 +76,10 @@ struct Move {
      * @pre s must be either O or X.
      */
     Move(int r, int c, Cell s)
-        : row(validate_index(r)), //
-          col(validate_index(c)), //
-          symbol(validate_symbol(s)) {
-        assert(r >= 0 && c >= 0);
-    }
-    size_t validate_index(int n) {
-        assert(n >= 0 && n < size);
-        return n;
-    }
-    Cell validate_symbol(Cell s) {
+        : row(Validate::index(r)), //
+          col(Validate::index(c)), //
+          symbol(s) {
         assert(s == O || s == X);
-        return s;
     }
 };
 
@@ -84,6 +89,15 @@ struct Move {
  */
 class GameBoard {
   public:
+    GameBoard() = delete;
+    GameBoard(int n)
+        : size(Validate::size(n)),                            //
+          board(vector<vector<Cell>>(n, vector<Cell>(n, E))), //
+          o_wins(n),                                          //
+          x_wins(n) {
+        Validate::vector_size = n;
+    }
+
   private:
     /**
      * @brief Represents the possible winning conditions for a player, including rows,
@@ -93,19 +107,19 @@ class GameBoard {
     struct Wins {
         vector<bool> rows;
         vector<bool> cols;
-        bool diag1 = false;
-        bool diag2 = false;
+        bool diag1;
+        bool diag2;
 
         /**
          * @brief Constructs Wins with the given board size, initializing all winning
          * conditions to true (indicating that they are all possible at the start of the
          * game).
          */
-        Wins(const size_t n) {
-            assert(n >= 1);
-            rows = vector<bool>(n, false);
-            cols = vector<bool>(n, false);
-        }
+        Wins() = delete;
+        Wins(const int n)
+            : rows(Validate::size(n), true), //
+              cols(Validate::size(n), true), //
+              diag1(true), diag2(true) {}
 
         /**
          * @brief Checks if there are any winning conditions met for this symbol.

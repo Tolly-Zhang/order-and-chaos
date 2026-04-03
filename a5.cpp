@@ -112,8 +112,8 @@ class GameBoard {
             return diag1 || diag2;
         }
     };
-
-    vector<vector<Cell>> board{};
+    size_t size;
+    vector<vector<Cell>> board;
     Wins o_wins;
     Wins x_wins;
 };

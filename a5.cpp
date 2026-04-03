@@ -49,6 +49,7 @@ enum Cell {
  * placed.
  */
 struct Move {
+    inline static size_t size;
     size_t row;
     size_t col;
     Cell symbol;
@@ -61,12 +62,19 @@ struct Move {
      * @pre r > = 0 && c >= 0
      * @pre s must be either O or X.
      */
-    Move(size_t r, size_t c, Cell s) {
+    Move(int r, int c, Cell s)
+        : row(validate_index(r)), //
+          col(validate_index(c)), //
+          symbol(validate_symbol(s)) {
         assert(r >= 0 && c >= 0);
+    }
+    size_t validate_index(int n) {
+        assert(n >= 0 && n < size);
+        return n;
+    }
+    Cell validate_symbol(Cell s) {
         assert(s == O || s == X);
-        row = r;
-        col = c;
-        symbol = s;
+        return s;
     }
 };
 

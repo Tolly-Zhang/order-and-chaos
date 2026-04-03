@@ -31,7 +31,9 @@
 //
 #include <array>
 #include <cassert>
+#include <iomanip>
 #include <iostream>
+#include <string>
 #include <vector>
 
 using namespace std;
@@ -56,6 +58,17 @@ enum Cell {
     O, ///< Cell occupied by player O
     X  ///< Cell occupied by player X
 };
+ostream& operator<<(ostream& os, Cell c) {
+    switch (c) {
+    case E:
+        return os << ".";
+    case O:
+        return os << "O";
+    case X:
+        return os << "X";
+    }
+    return os;
+}
 
 /**
  * @brief Represents a move made by a player, including the row, column, and symbol
@@ -98,6 +111,22 @@ class GameBoard {
         Validate::vector_size = n;
     }
 
+    void print() const {
+        int width = to_string(size).length() + 1;
+        cout << setw(width) << "";
+        for (int i = col_label_start; i <= size; ++i) {
+            cout << setw(width) << i;
+        }
+        cout << "\n";
+        for (size_t r = 0; r < size; ++r) {
+            cout << setw(width) << char(row_label_start + r);
+            for (size_t c = 0; c < size; ++c) {
+                cout << setw(width) << board[r][c];
+            }
+            cout << "\n";
+        }
+    }
+
   private:
     /**
      * @brief Represents the possible winning conditions for a player, including rows,
@@ -135,8 +164,11 @@ class GameBoard {
             return diag1 || diag2;
         }
     };
-    size_t size;
+
+    const size_t size;
     vector<vector<Cell>> board;
+    const char row_label_start = 'A';
+    const int col_label_start = 1;
     Wins o_wins;
     Wins x_wins;
 };

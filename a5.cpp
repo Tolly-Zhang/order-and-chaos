@@ -38,12 +38,29 @@
 
 using namespace std;
 
+/**
+ * @brief Helper validation utilities for board size and index bounds.
+ */
 struct Validate {
     inline static size_t vector_size;
+
+    /**
+     * @brief Validates and converts a board size.
+     * @param n Proposed board size.
+     * @return n as size_t.
+     * @pre n >= 1.
+     */
     static size_t size(int n) {
         assert(n >= 1);
         return n;
     }
+
+    /**
+     * @brief Validates and converts a board index.
+     * @param n Proposed row or column index.
+     * @return n as size_t.
+     * @pre 0 <= n < vector_size.
+     */
     static size_t index(int n) {
         assert(n >= 0 && n < vector_size);
         return n;
@@ -58,6 +75,13 @@ enum Cell {
     O, ///< Cell occupied by player O
     X  ///< Cell occupied by player X
 };
+
+/**
+ * @brief Prints a cell symbol as '.', 'O', or 'X'.
+ * @param os Output stream.
+ * @param c Cell value to print.
+ * @return The output stream.
+ */
 ostream& operator<<(ostream& os, Cell c) {
     switch (c) {
     case E:
@@ -85,7 +109,8 @@ struct Move {
      * @param r The row index of the move.
      * @param c The column index of the move.
      * @param s The symbol to place (O or X).
-     * @pre r > = 0 && c >= 0
+     * @pre r >= 0 && r < size
+     * @pre c >= 0 && c < size.
      * @pre s must be either O or X.
      */
     Move(int r, int c, Cell s)
@@ -103,6 +128,12 @@ struct Move {
 class GameBoard {
   public:
     GameBoard() = delete;
+
+    /**
+     * @brief Constructs an n x n game board with all cells empty.
+     * @param n Board size.
+     * @pre n >= 1.
+     */
     GameBoard(int n)
         : size(Validate::size(n)),                            //
           board(vector<vector<Cell>>(n, vector<Cell>(n, E))), //
@@ -111,6 +142,9 @@ class GameBoard {
         Validate::vector_size = n;
     }
 
+    /**
+     * @brief Prints the board with row and column labels.
+     */
     void print() const {
         int width = to_string(size).length() + 1;
         cout << setw(width) << "";
@@ -180,10 +214,19 @@ class GameBoard {
 class Player {
   private:
     const string name;
+
+    /**
+     * @brief Identifies whether a player is trying to create order or chaos.
+     */
     enum PlayerType { ORDER, CHAOS };
     const PlayerType type;
 
   public:
+    /**
+     * @brief Constructs a player with a name and role.
+     * @param name Player display name.
+     * @param type Player role (ORDER or CHAOS).
+     */
     Player(const string& name, PlayerType type) : name(name), type(type) {}
 
     /**
@@ -216,6 +259,9 @@ class Computer : public Player {
  */
 class Game {
   public:
+    /**
+     * @brief Runs full game sessions until the players choose to stop.
+     */
     void play() {
         bool repeat = true;
         while (repeat) {
@@ -224,6 +270,10 @@ class Game {
             repeat = end();
         }
     }
+
+    /**
+     * @brief Initializes the game and prints player instructions.
+     */
     void start() {
         string instructions =
             "Welcome to Order and Chaos!\n"
@@ -234,13 +284,24 @@ class Game {
         cout << instructions;
     }
 
+    /**
+     * @brief Executes one turn for the active player.
+     * @param player The player taking this turn.
+     */
     void turn(Player& player) {
         Move move = player.get_move(game_board);
     }
 
+    /**
+     * @brief Handles end-of-game logic.
+     * @return true to start another game, false to stop.
+     */
     bool end() {}
 
   private:
+    /**
+     * @brief Represents the current state of the game.
+     */
     enum GameState {};
 
     GameBoard game_board;

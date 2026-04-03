@@ -61,11 +61,12 @@ struct Move {
      * @pre r > = 0 && c >= 0
      * @pre s must be either O or X.
      */
-    Move(size_t r, size_t c, Cell s)
-        : row(r), //
-          col(c), //
-          symbol(s) {
+    Move(size_t r, size_t c, Cell s) {
+        assert(r >= 0 && c >= 0);
         assert(s == O || s == X);
+        row = r;
+        col = c;
+        symbol = s;
     }
 };
 
@@ -92,10 +93,10 @@ class GameBoard {
          * conditions to true (indicating that they are all possible at the start of the
          * game).
          */
-        Wins(const size_t n)
-            : rows(n, true), //
-              cols(n, true) {
+        Wins(const size_t n) {
             assert(n >= 1);
+            rows = vector<bool>(n, false);
+            cols = vector<bool>(n, false);
         }
 
         /**

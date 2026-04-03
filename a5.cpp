@@ -171,12 +171,12 @@ class Game {
         }
     }
     void start() {
-        string instructions = R"(
-            Welcome to Order and Chaos!
-            In this game, two players take turns placing Os and Xs onto the board.
-            Each turn, both players can choose whether to place an O or and X.
-            Order wins if they can place 5 Xs or Os in a row. Chaos wins if they can prevent this.
-        )";
+        string instructions =
+            "Welcome to Order and Chaos!\n"
+            "In this game, two players take turns placing Os and Xs onto the board."
+            "Each turn, both players can choose whether to place an O or and X.\n"
+            "Order wins if they can place 5 Xs or Os in a row. Chaos wins if they can "
+            "prevent this.";
         cout << instructions;
     }
 

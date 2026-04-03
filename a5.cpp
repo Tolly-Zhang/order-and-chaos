@@ -62,10 +62,9 @@ struct Move {
      * @pre s must be either O or X.
      */
     Move(size_t r, size_t c, Cell s)
-        : row(max(r, size_t(0))), //
-          col(max(c, size_t(0))), //
+        : row(r), //
+          col(c), //
           symbol(s) {
-        assert(r >= 0 && c >= 0);
         assert(s == O || s == X);
     }
 };
@@ -94,9 +93,9 @@ class GameBoard {
          * game).
          */
         Wins(const size_t n)
-            : rows(max(n, size_t(1)), true), //
-              cols(max(n, size_t(1)), true) {
-            assert(n > 0);
+            : rows(n, true), //
+              cols(n, true) {
+            assert(n >= 1);
         }
 
         /**

@@ -258,7 +258,7 @@ class Player {
      * @param game_board The current game board.
      * @return The move chosen by the player.
      */
-    virtual Move get_move(GameBoard game_board) const = 0;
+    virtual Move get_move(GameBoard& game_board) const = 0;
 };
 
 /**

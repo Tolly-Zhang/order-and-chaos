@@ -61,15 +61,16 @@ char to_lower(char c){
  */
 struct Validate {
     inline static size_t vector_size;
+    inline static const size_t MIN_SIZE = 1, MAX_SIZE = 26;
 
     /**
      * @brief Validates and converts a board size.
      * @param n Proposed board size.
      * @return n as size_t.
-     * @pre n >= 1.
+     * @pre n >= 1 && n <= MAX_SIZE.
      */
     static size_t size(int n) {
-        assert(n >= 1);
+        assert(n >= MIN_SIZE && n <= MAX_SIZE);
         return n;
     }
 
@@ -150,7 +151,7 @@ class GameBoard {
     /**
      * @brief Constructs an n x n game board with all cells empty.
      * @param n Board size.
-     * @pre n >= 1.
+     * @pre n >= MIN_SIZE && n <= MAX_SIZE.
      */
     GameBoard(int n)
         : size(Validate::size(n)),                            //

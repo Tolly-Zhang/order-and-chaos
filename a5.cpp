@@ -33,6 +33,7 @@
 #include <cassert>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -162,20 +163,22 @@ class GameBoard {
     /**
      * @brief Prints the board with row and column labels.
      */
-    void print() const {
+    string print() const {
+        ostringstream oss;
         int width = to_string(size).length() + 1;
-        cout << setw(width) << "";
-        for (int i = col_label_start; i <= size; ++i) {
-            cout << setw(width) << i;
+        oss << setw(width) << "";
+        for (int i = col_label_start; i <= static_cast<int>(size); ++i) {
+            oss << setw(width) << i;
         }
-        cout << "\n";
+        oss << "\n";
         for (size_t r = 0; r < size; ++r) {
-            cout << setw(width) << char(row_label_start + r);
+            oss << setw(width) << char(row_label_start + r);
             for (size_t c = 0; c < size; ++c) {
-                cout << setw(width) << board[r][c];
+                oss << setw(width) << board[r][c];
             }
-            cout << "\n";
+            oss << "\n";
         }
+        return oss.str();
     }
 
     int get_size(){

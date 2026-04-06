@@ -242,7 +242,6 @@ class Player {
     /**
      * @brief Identifies whether a player is trying to create order or chaos.
      */
-    enum PlayerType { ORDER, CHAOS };
     const PlayerType type;
 
   public:
@@ -267,9 +266,7 @@ class Player {
  */
 class Human : public Player {
     public:
-    // empty constructor for now
-    Human();
-
+    Human(const string& name, Player::PlayerType type) : Player(name, type){}
 
     // Returns a move with x, y
     Move get_move(GameBoard game_board) const{
@@ -370,8 +367,22 @@ class Game {
             "Each turn, both players can choose whether to place an O or and X.\n"
             "Order wins if they can place 5 Xs or Os in a row. Chaos wins if they can "
             "prevent this.";
-        cout << instructions;
+        cout << instructions << endl;
 
+        string orderName;
+        string chaosName;
+
+        cout<<"What is Order's name: ";
+        getline(cin, orderName);
+
+        char opSelect;
+        cout<<"Player vs Player? (y,n)";
+        cin>>opSelect;
+        cin.ignore(1000,'\n');
+        if (opSelect == 'y') {
+            cout<<"What is Chaos's name: ";
+            getline(cin, chaosName);   
+        }
     }
     
 

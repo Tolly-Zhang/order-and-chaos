@@ -38,6 +38,19 @@
 
 using namespace std;
 
+// Returns true if the character is a digit
+bool is_digit(char c){
+    return (c >= '0' && c <= '9');
+}
+
+// Returns uppercase characters to lower case, otherwise returns character
+char to_lower(char c){
+    if ('A'<=c && c<='Z'){
+        return c + 32;
+    }
+    return c;
+}
+
 /**
  * @brief Helper validation utilities for board size and index bounds.
  */
@@ -243,6 +256,64 @@ class Player {
  */
 class Human : public Player {
   public:
+
+  Move get_move(){
+    char symbol;
+    int x = -1;
+    int y = -1;
+    bool valid = false;
+
+    Cell cellSymbol;
+
+
+    while (!valid){
+        cout << "Enter a symbol (x or o): ";
+        cin >> symbol;
+        symbol = to_lower(symbol);
+
+
+        if (symbol == 'x'){
+            cellSymbol = X;
+        } else if (symbol == 'o'){
+            cellSymbol = O;
+        } else {
+            cout << "Invalid symbol! Try again." << endl;
+            cin.ignore(1000, '\n');
+            continue;
+        }
+
+        cin.ignore(1000, '\n');
+
+        cout << "Enter a coordinate (x,y): ";
+
+        // how many valid coordinates are found
+        char inputChar;
+        int found = 0;
+        while (found < 2 && cin.get(inputChar)){
+            if (is_digit(inputChar)){
+                if (found == 0){
+                    // converts character to int
+                    x = inputChar - '0';
+                    found++;
+                } else {
+                    y = inputChar - '0';
+                    found++;
+                }
+            }
+        }
+        if (found == 2 && x > -1 && y > -1){
+            valid = true;
+        }
+        else {
+            cout << "Invalid coordinates, please format (x,y)" << endl;
+            cin.ignore(1000, '\n');
+            continue;;
+        }
+    }
+
+    return Move(y,x,cellSymbol);
+
+  }
   private:
 };
 

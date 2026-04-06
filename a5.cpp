@@ -174,6 +174,10 @@ class GameBoard {
         }
     }
 
+    int get_size(){
+        return to_string(size).length() + 1;
+    }
+
   private:
     /**
      * @brief Represents the possible winning conditions for a player, including rows,
@@ -255,66 +259,74 @@ class Player {
  * @brief Represents a human player in the game.
  */
 class Human : public Player {
-  public:
-
-  Move get_move(){
-    char symbol;
-    int x = -1;
-    int y = -1;
-    bool valid = false;
-
-    Cell cellSymbol;
+    public:
+    // empty constructor for now
+    Human();
 
 
-    while (!valid){
-        cout << "Enter a symbol (x or o): ";
-        cin >> symbol;
-        symbol = to_lower(symbol);
+    // Returns a move with x, y
+    Move get_move(GameBoard game_board) const{
+        char symbol;
+        int x = -1;
+        int y = -1;
+        bool valid = false;
+        
+        int gameSize = game_board.get_size();
+        Cell cellSymbol;
 
 
-        if (symbol == 'x'){
-            cellSymbol = X;
-        } else if (symbol == 'o'){
-            cellSymbol = O;
-        } else {
-            cout << "Invalid symbol! Try again." << endl;
+        while (!valid){
+            cout << "Enter a symbol (x or o): ";
+            cin >> symbol;
+            symbol = to_lower(symbol);
+
+
+            if (symbol == 'x'){
+                cellSymbol = X;
+            } else if (symbol == 'o'){
+                cellSymbol = O;
+            } else {
+                cout << "Invalid symbol! Try again." << endl;
+                cin.ignore(1000, '\n');
+                continue;
+            }
+
             cin.ignore(1000, '\n');
-            continue;
-        }
 
-        cin.ignore(1000, '\n');
+            cout << "Enter a coordinate (x,y): ";
 
-        cout << "Enter a coordinate (x,y): ";
-
-        // how many valid coordinates are found
-        char inputChar;
-        int found = 0;
-        while (found < 2 && cin.get(inputChar)){
-            if (is_digit(inputChar)){
-                if (found == 0){
-                    // converts character to int
-                    x = inputChar - '0';
-                    found++;
-                } else {
-                    y = inputChar - '0';
-                    found++;
+            // how many valid coordinates are found
+            char inputChar;
+            int found = 0;
+            while (found < 2 && cin.get(inputChar)){
+                if (is_digit(inputChar)){
+                    if (found == 0){
+                        // converts character to int
+                        x = inputChar - '0';
+                        found++;
+                    } else {
+                        y = inputChar - '0';
+                        found++;
+                    }
                 }
             }
+
+
+            // please add a way to check if its within game_board size later
+            if (found == 2 && x > -1 && y > -1 && x < gameSize && y < gameSize){
+                valid = true;
+            }
+            else {
+                cout << "Invalid coordinates, please format (x,y)" << endl;
+                cin.ignore(1000, '\n');
+                continue;;
+            }
         }
-        if (found == 2 && x > -1 && y > -1){
-            valid = true;
-        }
-        else {
-            cout << "Invalid coordinates, please format (x,y)" << endl;
-            cin.ignore(1000, '\n');
-            continue;;
-        }
+
+        return Move(y,x,cellSymbol);
+
     }
-
-    return Move(y,x,cellSymbol);
-
-  }
-  private:
+    private:
 };
 
 /**
@@ -353,7 +365,16 @@ class Game {
             "Order wins if they can place 5 Xs or Os in a row. Chaos wins if they can "
             "prevent this.";
         cout << instructions;
+
+                char opSelect;
+        cout<<"Player vs Player? (y,n)";
+        cin>>opSelect;
+        cin.ignore(1000,'\n');
+        if (opSelect == 'y') {
+            player2 = &Human();
+        }
     }
+    
 
     /**
      * @brief Executes one turn for the active player.

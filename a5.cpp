@@ -43,6 +43,10 @@ bool is_digit(char c){
     return (c >= '0' && c <= '9');
 }
 
+bool is_alpha(char c){
+    return (c >= 'a' && c<='z') || (c >= 'A' && c <= 'Z');
+}
+
 // Returns uppercase characters to lower case, otherwise returns character
 char to_lower(char c){
     if ('A'<=c && c<='Z'){
@@ -267,8 +271,8 @@ class Human : public Player {
     // Returns a move with x, y
     Move get_move(GameBoard game_board) const{
         char symbol;
-        int x = -1;
-        int y = -1;
+        int row = -1;
+        int column = -1;
         bool valid = false;
         
         int gameSize = game_board.get_size();
@@ -293,27 +297,26 @@ class Human : public Player {
 
             cin.ignore(1000, '\n');
 
-            cout << "Enter a coordinate (x,y): ";
+            cout << "Enter a coordinate: ";
 
-            // how many valid coordinates are found
             char inputChar;
-            int found = 0;
-            while (found < 2 && cin.get(inputChar)){
-                if (is_digit(inputChar)){
-                    if (found == 0){
-                        // converts character to int
-                        x = inputChar - '0';
-                        found++;
-                    } else {
-                        y = inputChar - '0';
-                        found++;
-                    }
-                }
+            int foundCoords = 0;
+            while (cin.get(inputChar) && inputChar != '\n') {
+
+            if (is_alpha(inputChar)) {
+                char lowerChar = to_lower(inputChar);
+                column = lowerChar - 'a';
+                foundCoords++;
             }
+            else if (is_digit(inputChar)) {
+                row = (inputChar - '0') - 1; 
+                foundCoords++;
+            }
+        }
 
 
             // please add a way to check if its within game_board size later
-            if (found == 2 && x > -1 && y > -1 && x < gameSize && y < gameSize){
+            if (foundCoords == 2 && row > -1 && column > -1 && row < gameSize && column < gameSize){
                 valid = true;
             }
             else {
@@ -323,7 +326,7 @@ class Human : public Player {
             }
         }
 
-        return Move(y,x,cellSymbol);
+        return Move(row,column,cellSymbol);
 
     }
     private:
@@ -366,13 +369,6 @@ class Game {
             "prevent this.";
         cout << instructions;
 
-                char opSelect;
-        cout<<"Player vs Player? (y,n)";
-        cin>>opSelect;
-        cin.ignore(1000,'\n');
-        if (opSelect == 'y') {
-            player2 = &Human();
-        }
     }
     
 

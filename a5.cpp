@@ -40,51 +40,21 @@
 using namespace std;
 
 // Returns true if the character is a digit
-bool is_digit(char c){
+bool is_digit(char c) {
     return (c >= '0' && c <= '9');
 }
 
-bool is_alpha(char c){
-    return (c >= 'a' && c<='z') || (c >= 'A' && c <= 'Z');
+bool is_alpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
 }
 
 // Returns uppercase characters to lower case, otherwise returns character
-char to_lower(char c){
-    if ('A'<=c && c<='Z'){
+char to_lower(char c) {
+    if ('A' <= c && c <= 'Z') {
         return c + 32;
     }
     return c;
 }
-
-/**
- * @brief Helper validation utilities for board size and index bounds.
- */
-struct Validate {
-    inline static size_t vector_size;
-    inline static const size_t MIN_SIZE = 1, MAX_SIZE = 26;
-
-    /**
-     * @brief Validates and converts a board size.
-     * @param n Proposed board size.
-     * @return n as size_t.
-     * @pre n >= 1 && n <= MAX_SIZE.
-     */
-    static size_t size(int n) {
-        assert(n >= MIN_SIZE && n <= MAX_SIZE);
-        return n;
-    }
-
-    /**
-     * @brief Validates and converts a board index.
-     * @param n Proposed row or column index.
-     * @return n as size_t.
-     * @pre 0 <= n < vector_size.
-     */
-    static size_t index(int n) {
-        assert(n >= 0 && n < vector_size);
-        return n;
-    }
-};
 
 /**
  * @brief Represents the state of a cell on the game board.
@@ -133,8 +103,8 @@ struct Move {
      * @pre s must be either O or X.
      */
     Move(int r, int c, Cell s)
-        : row(Validate::index(r)), //
-          col(Validate::index(c)), //
+        : row(r), //
+          col(c), //
           symbol(s) {
         assert(s == O || s == X);
     }
@@ -154,12 +124,10 @@ class GameBoard {
      * @pre n >= MIN_SIZE && n <= MAX_SIZE.
      */
     GameBoard(int n)
-        : size(Validate::size(n)),                            //
+        : size(n),                                            //
           board(vector<vector<Cell>>(n, vector<Cell>(n, E))), //
           o_wins(n),                                          //
-          x_wins(n) {
-        Validate::vector_size = n;
-    }
+          x_wins(n) {}
 
     /**
      * @brief Prints the board with row and column labels.
@@ -182,7 +150,7 @@ class GameBoard {
         return oss.str();
     }
 
-    int get_size(){
+    int get_size() {
         return to_string(size).length() + 1;
     }
 
@@ -205,8 +173,8 @@ class GameBoard {
          */
         Wins() = delete;
         Wins(const int n)
-            : rows(Validate::size(n), true), //
-              cols(Validate::size(n), true), //
+            : rows(n, true), //
+              cols(n, true), //
               diag1(true), diag2(true) {}
 
         /**
@@ -269,29 +237,27 @@ class Player {
  * @brief Represents a human player in the game.
  */
 class Human : public Player {
-    public:
-    Human(const string& name, Player::PlayerType type) : Player(name, type){}
+  public:
+    Human(const string& name, Player::PlayerType type) : Player(name, type) {}
 
     // Returns a move with x, y
-    Move get_move(GameBoard game_board) const{
+    Move get_move(GameBoard game_board) const {
         char symbol;
         int row = -1;
         int column = -1;
         bool valid = false;
-        
+
         int gameSize = game_board.get_size();
         Cell cellSymbol;
 
-
-        while (!valid){
+        while (!valid) {
             cout << "Enter a symbol (x or o): ";
             cin >> symbol;
             symbol = to_lower(symbol);
 
-
-            if (symbol == 'x'){
+            if (symbol == 'x') {
                 cellSymbol = X;
-            } else if (symbol == 'o'){
+            } else if (symbol == 'o') {
                 cellSymbol = O;
             } else {
                 cout << "Invalid symbol! Try again." << endl;
@@ -307,33 +273,32 @@ class Human : public Player {
             int foundCoords = 0;
             while (cin.get(inputChar) && inputChar != '\n') {
 
-            if (is_alpha(inputChar)) {
-                char lowerChar = to_lower(inputChar);
-                column = lowerChar - 'a';
-                foundCoords++;
+                if (is_alpha(inputChar)) {
+                    char lowerChar = to_lower(inputChar);
+                    column = lowerChar - 'a';
+                    foundCoords++;
+                } else if (is_digit(inputChar)) {
+                    row = (inputChar - '0') - 1;
+                    foundCoords++;
+                }
             }
-            else if (is_digit(inputChar)) {
-                row = (inputChar - '0') - 1; 
-                foundCoords++;
-            }
-        }
-
 
             // please add a way to check if its within game_board size later
-            if (foundCoords == 2 && row > -1 && column > -1 && row < gameSize && column < gameSize){
+            if (foundCoords == 2 && row > -1 && column > -1 && row < gameSize &&
+                column < gameSize) {
                 valid = true;
-            }
-            else {
+            } else {
                 cout << "Invalid coordinates, please format (x,y)" << endl;
                 cin.ignore(1000, '\n');
-                continue;;
+                continue;
+                ;
             }
         }
 
-        return Move(row,column,cellSymbol);
-
+        return Move(row, column, cellSymbol);
     }
-    private:
+
+  private:
 };
 
 /**
@@ -376,19 +341,18 @@ class Game {
         string orderName;
         string chaosName;
 
-        cout<<"What is Order's name: ";
+        cout << "What is Order's name: ";
         getline(cin, orderName);
 
         char opSelect;
-        cout<<"Player vs Player? (y,n)";
-        cin>>opSelect;
-        cin.ignore(1000,'\n');
+        cout << "Player vs Player? (y,n)";
+        cin >> opSelect;
+        cin.ignore(1000, '\n');
         if (opSelect == 'y') {
-            cout<<"What is Chaos's name: ";
-            getline(cin, chaosName);   
+            cout << "What is Chaos's name: ";
+            getline(cin, chaosName);
         }
     }
-    
 
     /**
      * @brief Executes one turn for the active player.

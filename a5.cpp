@@ -134,9 +134,9 @@ class GameBoard {
      */
     string print() const {
         ostringstream oss;
-        int width = to_string(size).length() + 1;
+        int width = column_width();
         oss << setw(width) << "";
-        for (int i = COL_LABEL_START; i <= static_cast<int>(size); ++i) {
+        for (int i = COL_LABEL_START; i <= int(size); ++i) {
             oss << setw(width) << i;
         }
         oss << "\n";
@@ -193,11 +193,11 @@ class GameBoard {
             return diag1 || diag2;
         }
     };
-
     const size_t size;
     vector<vector<Cell>> board;
     Wins o_wins;
     Wins x_wins;
+
     int column_width() const {
         return to_string(size).length() + 1;
     }

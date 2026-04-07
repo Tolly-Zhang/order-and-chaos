@@ -39,15 +39,6 @@
 
 using namespace std;
 
-// Returns true if the character is a digit
-bool is_digit(char c) {
-    return (c >= '0' && c <= '9');
-}
-
-bool is_alpha(char c) {
-    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-
 // Returns uppercase characters to lower case, otherwise returns character
 char to_lower(char c) {
     if ('A' <= c && c <= 'Z') {
@@ -83,12 +74,23 @@ ostream& operator<<(ostream& os, Cell c) {
     return os;
 }
 
+enum PlayerType { ORDER, CHAOS };
+
+ostream& operator<<(ostream& os, PlayerType type) {
+    switch (type) {
+    case ORDER:
+        return os << "Order";
+    case CHAOS:
+        return os << "Chaos";
+    }
+    return os;
+}
+
 /**
  * @brief Represents a move made by a player, including the row, column, and symbol
  * placed.
  */
 struct Move {
-    inline static size_t size;
     size_t row;
     size_t col;
     Cell symbol;
@@ -132,7 +134,7 @@ class GameBoard {
     /**
      * @brief Prints the board with row and column labels.
      */
-    string print() const {
+    string str() const {
         ostringstream oss;
         int width = column_width();
         oss << setw(width) << "";
@@ -149,9 +151,15 @@ class GameBoard {
         }
         return oss.str();
     }
+    size_t get_size() const {
+        return size;
+    }
 
-    int get_size() {
-        return to_string(size).length() + 1;
+    char get_row_start() {
+        return ROW_LABEL_START;
+    }
+    int get_col_start() {
+        return COL_LABEL_START;
     }
 
   private:
@@ -209,17 +217,6 @@ class GameBoard {
  */
 class Player {
   public:
-    enum PlayerType { ORDER, CHAOS };
-
-  private:
-    const string name;
-
-    /**
-     * @brief Identifies whether a player is trying to create order or chaos.
-     */
-    const PlayerType type;
-
-  public:
     /**
      * @brief Constructs a player with a name and role.
      * @param name Player display name.
@@ -234,6 +231,13 @@ class Player {
      * @return The move chosen by the player.
      */
     virtual Move get_move(GameBoard& game_board) const = 0;
+
+  private:
+    const string name;
+    /**
+     * @brief Identifies whether a player is trying to create order or chaos.
+     */
+    const PlayerType type;
 };
 
 /**
@@ -241,67 +245,72 @@ class Player {
  */
 class Human : public Player {
   public:
-    Human(const string& name, Player::PlayerType type) : Player(name, type) {}
+    Human(const string& name, PlayerType type) : Player(name, type) {}
 
     // Returns a move with x, y
-    Move get_move(GameBoard game_board) const {
-        char symbol;
-        int row = -1;
-        int column = -1;
-        bool valid = false;
-
-        int gameSize = game_board.get_size();
-        Cell cellSymbol;
-
-        while (!valid) {
-            cout << "Enter a symbol (x or o): ";
-            cin >> symbol;
-            symbol = to_lower(symbol);
-
-            if (symbol == 'x') {
-                cellSymbol = X;
-            } else if (symbol == 'o') {
-                cellSymbol = O;
-            } else {
-                cout << "Invalid symbol! Try again." << endl;
-                cin.ignore(1000, '\n');
-                continue;
-            }
-
-            cin.ignore(1000, '\n');
-
-            cout << "Enter a coordinate: ";
-
-            char inputChar;
-            int foundCoords = 0;
-            while (cin.get(inputChar) && inputChar != '\n') {
-
-                if (is_alpha(inputChar)) {
-                    char lowerChar = to_lower(inputChar);
-                    column = lowerChar - 'a';
-                    foundCoords++;
-                } else if (is_digit(inputChar)) {
-                    row = (inputChar - '0') - 1;
-                    foundCoords++;
-                }
-            }
-
-            // please add a way to check if its within game_board size later
-            if (foundCoords == 2 && row > -1 && column > -1 && row < gameSize &&
-                column < gameSize) {
-                valid = true;
-            } else {
-                cout << "Invalid coordinates, please format (x,y)" << endl;
-                cin.ignore(1000, '\n');
-                continue;
-                ;
-            }
-        }
-
-        return Move(row, column, cellSymbol);
+    Move get_move(GameBoard& game_board) {
+        Move move(0, 0, E);
+        set_symbol(move);
+        set_coords(move, game_board);
+        return move;
     }
 
   private:
+    void set_symbol(Move& move) const {
+        char symbol;
+        Cell cell;
+        cout << "Enter; a symbol (x or o): ";
+        while (true) {
+            cin >> symbol;
+            symbol = to_lower(symbol);
+            cin.ignore(1000, '\n');
+            cout << "\x1b[2K";
+
+            if (symbol != 'o' && symbol != 'x') {
+                cout << symbol << " is not a valid symbol. Enter x or o:";
+                continue;
+            }
+
+            cell = (symbol == 'x') ? X : O;
+            move.symbol = cell;
+            break;
+        }
+    }
+    void set_coords(Move& move, GameBoard& game_board) {
+        move.col = get_index(
+            "column",                   //
+            game_board.get_col_start(), //
+            game_board.get_size() - 1
+        );
+        move.row = get_index(
+            "row",                      //
+            game_board.get_row_start(), //
+            game_board.get_size() - 1
+        );
+    }
+
+    template <typename T>
+    size_t get_index(const string& type, const T start, const size_t max_index) {
+        const T row_end = start + static_cast<T>(max_index);
+        const string range = string(1, start) + " to " + string(1, row_end);
+
+        cout << "Enter a " << type << " (" << range << ")";
+
+        T input;
+        while (true) {
+            cin >> input;
+            cin.ignore(1000, '\n');
+            cout << "\x1b[2K";
+
+            if (!(input >= start && input <= row_end)) {
+                cout << input << " is not a valid " << type "." //
+                     << "Please enter a" << type << " from " << range << ":";
+                continue;
+            }
+
+            return static_cast<size_t>(input - start);
+        }
+    }
 };
 
 /**
@@ -313,12 +322,14 @@ class Computer : public Player {
 };
 
 /**
- * @brief Represents the main game logic, including the game loop, and player turns.
+ * @brief Represents the main game logic, including the game loop, and
+ * player turns.
  */
 class Game {
   public:
     /**
-     * @brief Runs full game sessions until the players choose to stop.
+     * @brief Runs full game sessions until the players choose to
+     * stop.
      */
     void play() {
         bool repeat = true;
@@ -333,12 +344,14 @@ class Game {
      * @brief Initializes the game and prints player instructions.
      */
     void start() {
-        string instructions =
-            "Welcome to Order and Chaos!\n"
-            "In this game, two players take turns placing Os and Xs onto the board."
-            "Each turn, both players can choose whether to place an O or and X.\n"
-            "Order wins if they can place 5 Xs or Os in a row. Chaos wins if they can "
-            "prevent this.";
+        string instructions = "Welcome to Order and Chaos!\n"
+                              "In this game, two players take turns "
+                              "placing Os and Xs onto the board."
+                              "Each turn, both players can choose "
+                              "whether to place an O or and X.\n"
+                              "Order wins if they can place 5 Xs or "
+                              "Os in a row. Chaos wins if they can "
+                              "prevent this.";
         cout << instructions << endl;
 
         string orderName;

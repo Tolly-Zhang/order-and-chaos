@@ -136,12 +136,12 @@ class GameBoard {
         ostringstream oss;
         int width = to_string(size).length() + 1;
         oss << setw(width) << "";
-        for (int i = col_label_start; i <= static_cast<int>(size); ++i) {
+        for (int i = COL_LABEL_START; i <= static_cast<int>(size); ++i) {
             oss << setw(width) << i;
         }
         oss << "\n";
         for (size_t r = 0; r < size; ++r) {
-            oss << setw(width) << char(row_label_start + r);
+            oss << setw(width) << char(ROW_LABEL_START + r);
             for (size_t c = 0; c < size; ++c) {
                 oss << setw(width) << board[r][c];
             }
@@ -155,6 +155,8 @@ class GameBoard {
     }
 
   private:
+    const char ROW_LABEL_START = 'A';
+    const int COL_LABEL_START = 1;
     /**
      * @brief Represents the possible winning conditions for a player, including rows,
      * columns, and diagonals. Each condition is represented as a boolean indicating
@@ -194,10 +196,11 @@ class GameBoard {
 
     const size_t size;
     vector<vector<Cell>> board;
-    const char row_label_start = 'A';
-    const int col_label_start = 1;
     Wins o_wins;
     Wins x_wins;
+    int column_width() const {
+        return to_string(size).length() + 1;
+    }
 };
 
 /**

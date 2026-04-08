@@ -34,9 +34,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <ctime>
-#include <iomanip>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -66,22 +64,16 @@ enum Cell {
     X  ///< Cell occupied by player X
 };
 
-/**
- * @brief Prints a cell symbol as '.', 'O', or 'X'.
- * @param os Output stream.
- * @param c Cell value to print.
- * @return The output stream.
- */
-ostream& operator<<(ostream& os, Cell c) {
+string to_string(Cell c) {
     switch (c) {
     case E:
-        return os << ".";
+        return ".";
     case O:
-        return os << "O";
+        return "O";
     case X:
-        return os << "X";
+        return "X";
     }
-    return os;
+    return "";
 }
 
 /**
@@ -89,21 +81,14 @@ ostream& operator<<(ostream& os, Cell c) {
  */
 enum PlayerType { ORDER, CHAOS };
 
-/**
- * @brief Prints a player role as "Order" or "Chaos".
- * @param os Output stream.
- * @param type Player role to print.
- * @return The output stream.
- * @pre type is ORDER or CHAOS.
- */
-ostream& operator<<(ostream& os, PlayerType type) {
+string to_string(PlayerType type) {
     switch (type) {
     case ORDER:
-        return os << "Order";
+        return "Order";
     case CHAOS:
-        return os << "Chaos";
+        return "Chaos";
     }
-    return os;
+    return "";
 }
 
 /**
@@ -149,12 +134,14 @@ struct Block {
      */
     Block(const string& t) {
         text = t;
-        lines = count(t.begin(), t.end(), '\n') + 1;
+        lines = count(t.begin(), t.end(), '\n');
     }
 };
 
 class ConsoleRenderer {
   public:
+    vector<Block> blocks;
+    int lines;
     /**
      * @brief Creates an empty renderer state.
      * @post No blocks are stored and lines == 0.
@@ -169,7 +156,8 @@ class ConsoleRenderer {
      */
     void push(const Block& block) {
         blocks.push_back(block);
-        refresh();
+        lines += block.lines;
+        cout << block.text << flush;
     }
 
     /**
@@ -180,14 +168,13 @@ class ConsoleRenderer {
      */
     void pop(int extra_lines = 0) {
         if (blocks.empty()) return;
+        erase(blocks.back().lines + extra_lines);
+        lines -= blocks.back().lines;
         blocks.pop_back();
-        if (extra_lines > 0) lines += extra_lines;
-        refresh();
     }
-
-  private:
-    vector<Block> blocks;
-    int lines;
+    void pop_prompt() {
+        pop(1);
+    }
 
     /**
      * @brief Recomputes total line count and redraws all blocks.
@@ -195,13 +182,11 @@ class ConsoleRenderer {
      * @post lines equals total rendered block lines.
      */
     void refresh() {
-        int next_lines = 0;
-        for (const Block& block : blocks) {
-            next_lines += block.lines;
-        }
-        clear();
+        erase(lines);
+        lines = 0;
+        for (const Block& b : blocks)
+            lines += b.lines;
         print();
-        lines = next_lines;
     }
 
     /**
@@ -215,17 +200,32 @@ class ConsoleRenderer {
         }
     }
 
-    /**
-     * @brief Clears previously rendered console lines.
-     * @pre lines >= 0.
-     * @post Previously rendered region is erased when lines > 0.
-     */
-    void clear() {
-        if (lines <= 0) return;
-        cout << "\033[2K\r";
-        for (int i = 1; i < lines; ++i) {
-            cout << "\033[1A\033[2K\r";
+    void erase() {
+        erase_line();
+        move_cursor_up();
+        move_cursor_end();
+    }
+
+    void erase(int n) {
+        for (int i = 0; i < n; i++) {
+            erase();
         }
+    }
+
+  private:
+    void erase_line() {
+        cout << "\x1B[2K";
+    }
+    void move_cursor_up() {
+        cout << "\x1B[1A";
+    }
+
+    void move_cursor_front() {
+        cout << "\r";
+    }
+
+    void move_cursor_end() {
+        cout << "\x1B[9999C";
     }
 };
 
@@ -259,21 +259,21 @@ class GameBoard {
      * @post Returned string ends with a newline.
      */
     string str() const {
-        ostringstream oss;
+        string out = "\n";
         int width = column_width() + 1;
-        oss << setw(width) << "";
+        out += string(width, ' ');
         for (int i = COL_LABEL_START; i <= int(size); ++i) {
-            oss << setw(width) << i;
+            append_aligned(out, to_string(i), width);
         }
-        oss << "\n";
+        out += "\n";
         for (size_t r = 0; r < size; ++r) {
-            oss << setw(width) << char(ROW_LABEL_START + r);
+            append_aligned(out, string(1, char(ROW_LABEL_START + r)), width);
             for (size_t c = 0; c < size; ++c) {
-                oss << setw(width) << board[r][c];
+                append_aligned(out, to_string(board[r][c]), width);
             }
-            oss << "\n";
+            out += "\n";
         }
-        return oss.str();
+        return out;
     }
 
     /**
@@ -393,6 +393,14 @@ class GameBoard {
     int column_width() const {
         return to_string(size).length();
     }
+
+    static void append_aligned(string& text, const string& value, int width) {
+        int padding = width - static_cast<int>(value.length());
+        if (padding > 0) {
+            text += string(padding, ' ');
+        }
+        text += value;
+    }
 };
 
 /**
@@ -409,6 +417,10 @@ class Player {
      * @post Player stores the provided name and role.
      */
     Player(PlayerType type) : type(type) {}
+
+    PlayerType get_type() const {
+        return type;
+    }
 
     void set_type(PlayerType t) {
         type = t;
@@ -461,7 +473,7 @@ class Human : public Player {
      * @pre game_board has valid coordinate bounds.
      */
     Move get_move(const GameBoard& game_board, ConsoleRenderer& console) const override {
-        Move move(0, 0, E);
+        Move move(0, 0, X);
         set_coords(move, game_board, console);
         set_symbol(move, game_board, console);
         return move;
@@ -494,9 +506,8 @@ class Human : public Player {
         int col;
         while (true) {
             cin >> row >> col;
-
             cin.ignore(1000, '\n');
-            console.pop(1);
+            console.pop_prompt();
 
             if (!game_board.check_row_bounds(row)) {
                 console.push(Block(
@@ -539,10 +550,9 @@ class Human : public Player {
 
         while (true) {
             cin >> symbol;
-            symbol = to_lower(symbol);
-
             cin.ignore(1000, '\n');
-            console.pop(1);
+            symbol = to_lower(symbol);
+            console.pop_prompt();
 
             if (symbol != 'o' && symbol != 'x') {
                 console.push(Block(
@@ -624,11 +634,13 @@ class Game {
      */
     void play() {
         bool repeat = true;
-        while (repeat) {
-            start();
-            // ... game loop
-            repeat = end();
-        }
+        start();
+        console.push(Block(game_board.str()));
+        sleep(1);
+        console.pop();
+        sleep(1);
+        console.push(Block("\nGame over!"));
+        sleep(1);
     }
 
     /**
@@ -658,7 +670,9 @@ class Game {
      * @return true to start another game, false to stop.
      * @post Return value controls whether play() repeats.
      */
-    bool end() {}
+    bool end() {
+        return false;
+    }
 
   private:
     GameBoard game_board;
@@ -667,6 +681,12 @@ class Game {
     Human human;
     Computer computer;
     ConsoleRenderer console;
+
+    void wait_for_enter() {
+        console.push(Block("\nContinue? (Press Enter)>"));
+        cin.get();
+        console.pop_prompt();
+    }
 
     /**
      * @brief Shows opening instructions and waits for Enter.
@@ -680,10 +700,9 @@ class Game {
             "\nEach turn, both players can choose whether to place an O or and X."
             "\nOrder wins if they can place 5 Xs or Os in a row. Chaos wins if they can "
             "prevent this."
-            "\nPress enter to begin:"
         ));
-        cin.get();
-        console.pop(1);
+        wait_for_enter();
+        console.pop();
     }
 
     /**
@@ -697,7 +716,14 @@ class Game {
         int size;
         while (true) {
             getline(cin, input);
-            console.pop(1);
+            console.pop_prompt();
+
+            if (input.empty()) {
+                console.push(Block( //
+                    "\nNo input detected. Please enter a board size from 6 to 9: ")
+                );
+                continue;
+            }
 
             try {
                 size = stoi(input);
@@ -725,6 +751,12 @@ class Game {
         int num = rand() % 2;
         human.set_type((num == 0) ? CHAOS : ORDER);
         computer.set_type((num == 0) ? ORDER : CHAOS);
+        console.push(Block(
+            "\nYou will be " + to_string(human.get_type()) +
+            " and the computer will be " + to_string(computer.get_type()) + "."
+        ));
+        wait_for_enter();
+        console.pop();
     }
 
     /**
@@ -741,7 +773,13 @@ class Game {
             player1 = &computer;
             player2 = &human;
         }
-        // TODO: setup order and chaos
+
+        console.push(Block(
+            "\n" + to_string(player1->get_type()) + " will go first and " +
+            to_string(player2->get_type()) + " will go second."
+        ));
+        wait_for_enter();
+        console.pop();
     }
 };
 

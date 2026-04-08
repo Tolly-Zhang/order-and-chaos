@@ -410,6 +410,10 @@ class Player {
      */
     Player(PlayerType type) : type(type) {}
 
+    void set_type(PlayerType t) {
+        type = t;
+    }
+
     /**
      * @brief Gets the player's move based on the current game board state. This is a pure
      * virtual function that must be implemented by derived classes (Human and Computer).
@@ -427,7 +431,7 @@ class Player {
     /**
      * @brief Identifies whether a player is trying to create order or chaos.
      */
-    const PlayerType type;
+    PlayerType type;
 };
 
 /**
@@ -635,6 +639,8 @@ class Game {
     void start() {
         introduction();
         setup_board();
+        setup_roles();
+        setup_players();
     }
 
     /**
@@ -713,6 +719,12 @@ class Game {
             break;
         }
         game_board = GameBoard(size);
+    }
+
+    void setup_roles() {
+        int num = rand() % 2;
+        human.set_type((num == 0) ? CHAOS : ORDER);
+        computer.set_type((num == 0) ? ORDER : CHAOS);
     }
 
     /**

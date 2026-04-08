@@ -408,7 +408,7 @@ class Player {
      * @pre type is ORDER or CHAOS.
      * @post Player stores the provided name and role.
      */
-    Player(const string& name, PlayerType type) : name(name), type(type) {}
+    Player(PlayerType type) : type(type) {}
 
     /**
      * @brief Gets the player's move based on the current game board state. This is a pure
@@ -424,7 +424,6 @@ class Player {
     ) const = 0;
 
   private:
-    const string name;
     /**
      * @brief Identifies whether a player is trying to create order or chaos.
      */
@@ -440,7 +439,7 @@ class Human : public Player {
      * @brief Constructs a default human player named "Player" as ORDER.
      * @post Human player is initialized with default identity.
      */
-    Human() : Human("Player", ORDER) {}
+    Human() : Human(ORDER) {}
 
     /**
      * @brief Constructs a human player with explicit identity.
@@ -448,7 +447,7 @@ class Human : public Player {
      * @param type Role for this player.
      * @pre type is ORDER or CHAOS.
      */
-    Human(const string& name, PlayerType type) : Player(name, type) {}
+    Human(PlayerType type) : Player(type) {}
 
     /**
      * @brief Collects a full move from console input.
@@ -564,7 +563,7 @@ class Computer : public Player {
      * @brief Constructs a default computer player named "Computer" as CHAOS.
      * @post Computer player is initialized with default identity.
      */
-    Computer() : Computer("Computer", CHAOS) {}
+    Computer() : Computer(CHAOS) {}
 
     /**
      * @brief Constructs a computer player with explicit identity.
@@ -572,7 +571,7 @@ class Computer : public Player {
      * @param type Role for this player.
      * @pre type is ORDER or CHAOS.
      */
-    Computer(const string& name, PlayerType type) : Player(name, type) {}
+    Computer(PlayerType type) : Player(type) {}
 
     /**
      * @brief Chooses a move for the computer player.

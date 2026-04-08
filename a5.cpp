@@ -29,12 +29,16 @@
 // other libraries or substantial pieces of code from the web or other sources.
 // We want to see your own work.
 //
+#include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstdlib>
+#include <ctime>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <unistd.h>
 #include <vector>
 
 using namespace std;
@@ -112,31 +116,83 @@ struct Move {
     }
 };
 
+struct Block {
+    string text;
+    int lines;
+
+    Block() = delete;
+
+    Block(const string& t) {
+        text = t;
+        lines = count(t.begin(), t.end(), '\n') + 1;
+    }
+};
+
+class ConsoleRenderer {
+  public:
+    ConsoleRenderer() : lines(0) {}
+
+    void push(const Block& block) {
+        blocks.push_back(block);
+        refresh();
+    }
+
+    void pop(bool consumed_input = false) {
+        if (blocks.empty()) return;
+        blocks.pop_back();
+        if (consumed_input) ++lines;
+        refresh();
+    }
+
+  private:
+    vector<Block> blocks;
+    int lines;
+
+    void refresh() {
+        int next_lines = 0;
+        for (const Block& block : blocks) {
+            next_lines += block.lines;
+        }
+        clear();
+        print();
+        lines = next_lines;
+    }
+    void print() const {
+        for (const Block& block : blocks) {
+            cout << block.text;
+        }
+    }
+
+    void clear() {
+        if (lines <= 0) return;
+        cout << "\033[2K\r";
+        for (int i = 1; i < lines; ++i) {
+            cout << "\033[1A\033[2K\r";
+        }
+    }
+};
+
 /**
  * @brief Represents the game board and tracks possible winning conditions for both
  * players.
  */
 class GameBoard {
   public:
-    GameBoard() = delete;
+    GameBoard() : GameBoard(0) {}
 
     /**
      * @brief Constructs an n x n game board with all cells empty.
      * @param n Board size.
      * @pre n >= MIN_SIZE && n <= MAX_SIZE.
      */
-    GameBoard(int n)
-        : size(n),                                            //
-          board(vector<vector<Cell>>(n, vector<Cell>(n, E))), //
-          o_wins(n),                                          //
-          x_wins(n) {}
+    GameBoard(int n) : size(n), board(vector<vector<Cell>>(n, vector<Cell>(n, E))) {}
 
     /**
      * @brief Prints the board with row and column labels.
      */
     string str() const {
         ostringstream oss;
-        int width = column_width();
+        int width = column_width() + 1;
         oss << setw(width) << "";
         for (int i = COL_LABEL_START; i <= int(size); ++i) {
             oss << setw(width) << i;
@@ -155,59 +211,44 @@ class GameBoard {
         return size;
     }
 
-    char get_row_start() {
+    char get_row_start() const {
         return ROW_LABEL_START;
     }
-    int get_col_start() {
+    int get_col_start() const {
         return COL_LABEL_START;
     }
 
+    bool check_row_bounds(const char r) const {
+        int row_index = r - ROW_LABEL_START;
+        if (!(row_index >= 0)) return false;
+        if (!(row_index <= size - 1)) return false;
+        return true;
+    }
+    bool check_column_bounds(const int c) const {
+        int col_index = c - COL_LABEL_START;
+        if (!(col_index >= 0)) return false;
+        if (!(col_index <= size - 1)) return false;
+        return true;
+    }
+
   private:
-    const char ROW_LABEL_START = 'A';
-    const int COL_LABEL_START = 1;
+    static constexpr char ROW_LABEL_START = 'A';
+    static constexpr int COL_LABEL_START = 1;
     /**
      * @brief Represents the possible winning conditions for a player, including rows,
      * columns, and diagonals. Each condition is represented as a boolean indicating
      * whether it is still possible for that player to win in that way.
      */
     struct Wins {
-        vector<bool> rows;
-        vector<bool> cols;
-        bool diag1;
-        bool diag2;
-
-        /**
-         * @brief Constructs Wins with the given board size, initializing all winning
-         * conditions to true (indicating that they are all possible at the start of the
-         * game).
-         */
-        Wins() = delete;
-        Wins(const int n)
-            : rows(n, true), //
-              cols(n, true), //
-              diag1(true), diag2(true) {}
-
-        /**
-         * @brief Checks if there are any winning conditions met for this symbol.
-         * @return true if there is a win, false otherwise.
-         */
-        bool has_wins() const {
-            for (bool win : rows) {
-                if (win) return true;
-            }
-            for (bool win : cols) {
-                if (win) return true;
-            }
-            return diag1 || diag2;
-        }
+        // TODO: reimplement for different board sizes and refactor
     };
-    const size_t size;
+    size_t size;
     vector<vector<Cell>> board;
     Wins o_wins;
     Wins x_wins;
 
     int column_width() const {
-        return to_string(size).length() + 1;
+        return to_string(size).length();
     }
 };
 
@@ -230,7 +271,10 @@ class Player {
      * @param game_board The current game board.
      * @return The move chosen by the player.
      */
-    virtual Move get_move(GameBoard& game_board) const = 0;
+    virtual Move get_move(
+        const GameBoard& game_board, //
+        ConsoleRenderer& console
+    ) const = 0;
 
   private:
     const string name;
@@ -245,70 +289,88 @@ class Player {
  */
 class Human : public Player {
   public:
+    Human() : Human("Player", ORDER) {}
     Human(const string& name, PlayerType type) : Player(name, type) {}
 
     // Returns a move with x, y
-    Move get_move(GameBoard& game_board) {
+    Move get_move(const GameBoard& game_board, ConsoleRenderer& console) const override {
         Move move(0, 0, E);
-        set_symbol(move);
-        set_coords(move, game_board);
+        set_coords(move, game_board, console);
+        set_symbol(move, game_board, console);
         return move;
     }
 
   private:
-    void set_symbol(Move& move) const {
+    void
+    set_coords(Move& move, const GameBoard& game_board, ConsoleRenderer& console) const {
+        string row_range =
+            to_string(game_board.get_row_start()) + " to " +
+            to_string(game_board.get_row_start() + game_board.get_size() - 1);
+        string col_range =
+            to_string(game_board.get_col_start()) + " to " +
+            to_string(game_board.get_col_start() + game_board.get_size() - 1);
+
+        console.push(Block(
+            "\nEnter a coordinate in the format of [row] [col] from " + //
+            row_range + " and " + col_range + ": "
+        ));
+
+        char row;
+        int col;
+        while (true) {
+            cin >> row >> col;
+
+            cin.ignore(1000, '\n');
+            console.pop(true);
+
+            if (!game_board.check_row_bounds(row)) {
+                console.push(Block(
+                    "\n" + to_string(row) +
+                    " is not a valid row. Please enter a row from " + row_range + ": "
+                ));
+                continue;
+            }
+            if (!game_board.check_column_bounds(col)) {
+                console.push(Block(
+                    "\n" + to_string(col) +
+                    " is not a valid column. Please enter a column from " + col_range +
+                    ": "
+                ));
+                continue;
+            }
+            break;
+        }
+        move.row = row - game_board.get_row_start();
+        move.col = col - game_board.get_col_start();
+    }
+
+    void set_symbol(
+        Move& move,                  //
+        const GameBoard& game_board, //
+        ConsoleRenderer& console
+    ) const {
         char symbol;
         Cell cell;
-        cout << "Enter; a symbol (x or o): ";
+
+        console.push(Block("\nEnter a symbol (x or o): "));
+
         while (true) {
             cin >> symbol;
             symbol = to_lower(symbol);
+
             cin.ignore(1000, '\n');
-            cout << "\x1b[2K";
+            console.pop(true);
 
             if (symbol != 'o' && symbol != 'x') {
-                cout << symbol << " is not a valid symbol. Enter x or o:";
+                console.push(Block(
+                    "\n" + to_string(symbol) + " is not a valid symbol. Enter x or o:"
+                ));
                 continue;
             }
 
             cell = (symbol == 'x') ? X : O;
             move.symbol = cell;
             break;
-        }
-    }
-    void set_coords(Move& move, GameBoard& game_board) {
-        move.col = get_index(
-            "column",                   //
-            game_board.get_col_start(), //
-            game_board.get_size() - 1
-        );
-        move.row = get_index(
-            "row",                      //
-            game_board.get_row_start(), //
-            game_board.get_size() - 1
-        );
-    }
-
-    template <typename T>
-    size_t get_index(const string& type, const T start, const size_t max_index) {
-        const T row_end = start + static_cast<T>(max_index);
-        const string range = string(1, start) + " to " + string(1, row_end);
-
-        cout << "Enter a " << type << " (" << range << ")";
-
-        T input;
-        while (true) {
-            cin >> input;
-            cin.ignore(1000, '\n');
-            cout << "\x1b[2K";
-
-            if (!(input >= start && input <= row_end)) {
-                cout << input << " is not a valid " << type "." //
-                     << "Please enter a" << type << " from " << range << ":";
-                continue;
-            }
-
-            return static_cast<size_t>(input - start);
         }
     }
 };
@@ -318,6 +380,11 @@ class Human : public Player {
  */
 class Computer : public Player {
   public:
+    Computer() : Computer("Computer", CHAOS) {}
+    Computer(const string& name, PlayerType type) : Player(name, type) {}
+
+    Move get_move(const GameBoard& game_board, ConsoleRenderer& console) const override {}
+
   private:
 };
 
@@ -327,6 +394,7 @@ class Computer : public Player {
  */
 class Game {
   public:
+    Game() {}
     /**
      * @brief Runs full game sessions until the players choose to
      * stop.
@@ -344,30 +412,8 @@ class Game {
      * @brief Initializes the game and prints player instructions.
      */
     void start() {
-        string instructions = "Welcome to Order and Chaos!\n"
-                              "In this game, two players take turns "
-                              "placing Os and Xs onto the board."
-                              "Each turn, both players can choose "
-                              "whether to place an O or and X.\n"
-                              "Order wins if they can place 5 Xs or "
-                              "Os in a row. Chaos wins if they can "
-                              "prevent this.";
-        cout << instructions << endl;
-
-        string orderName;
-        string chaosName;
-
-        cout << "What is Order's name: ";
-        getline(cin, orderName);
-
-        char opSelect;
-        cout << "Player vs Player? (y,n)";
-        cin >> opSelect;
-        cin.ignore(1000, '\n');
-        if (opSelect == 'y') {
-            cout << "What is Chaos's name: ";
-            getline(cin, chaosName);
-        }
+        introduction();
+        setup_board();
     }
 
     /**
@@ -375,7 +421,7 @@ class Game {
      * @param player The player taking this turn.
      */
     void turn(Player& player) {
-        Move move = player.get_move(game_board);
+        Move move = player.get_move(game_board, console);
     }
 
     /**
@@ -385,15 +431,71 @@ class Game {
     bool end() {}
 
   private:
-    /**
-     * @brief Represents the current state of the game.
-     */
-    enum GameState {};
-
     GameBoard game_board;
-    GameState game_state;
     Player* player1;
     Player* player2;
+    Human human;
+    Computer computer;
+    ConsoleRenderer console;
+
+    void introduction() {
+        console.push(Block( //
+            "\nWelcome to Order and Chaos!"
+            "\nIn this game, two players take turns placing Os and Xs onto the board."
+            "\nEach turn, both players can choose whether to place an O or and X."
+            "\nOrder wins if they can place 5 Xs or Os in a row. Chaos wins if they can "
+            "prevent this."
+            "\nPress enter to begin:"
+        ));
+        cin.get();
+        console.pop(true);
+    }
+
+    void setup_board() {
+        console.push(Block("\nEnter a board size from 6 to 9: "));
+        string input;
+        int size;
+        while (true) {
+            getline(cin, input);
+            console.pop(true);
+
+            try {
+                size = stoi(input);
+            } catch (...) {
+                console.push(Block(
+                    "\n" + input +
+                    " is not an integer. Please enter an integer from 6 to 9: "
+                ));
+                continue;
+            }
+
+            if (!(size >= 6 && size <= 9)) {
+                console.push(Block(
+                    "\n" + to_string(size) +
+                    " is not a valid board size. Please enter one from 6 to 9: "
+                ));
+                continue;
+            }
+            break;
+        }
+        game_board = GameBoard(size);
+    }
+
+    void setup_players() {
+        int num = rand() % 2;
+        if (num == 0) {
+            player1 = &human;
+            player2 = &computer;
+        } else {
+            player1 = &computer;
+            player2 = &human;
+        }
+        // TODO: setup order and chaos
+    }
 };
 
-int main() {} // main
+int main() {
+    srand(time(nullptr));
+    Game game;
+    game.play();
+} // main

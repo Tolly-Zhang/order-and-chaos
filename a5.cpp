@@ -174,14 +174,14 @@ class ConsoleRenderer {
 
     /**
      * @brief Removes the newest block and redraws.
-     * @param consumed_input True when one input line was consumed by cin.
+     * @param extra_lines Number of additional input lines to clear.
      * @pre None.
      * @post If a block existed, the most recent one is removed.
      */
-    void pop(bool consumed_input = false) {
+    void pop(int extra_lines = 0) {
         if (blocks.empty()) return;
         blocks.pop_back();
-        if (consumed_input) ++lines;
+        if (extra_lines > 0) lines += extra_lines;
         refresh();
     }
 
@@ -247,7 +247,11 @@ class GameBoard {
      * @pre n >= 0.
      * @post get_size() == n and every board cell is E.
      */
-    GameBoard(int n) : size(n), board(vector<vector<Cell>>(n, vector<Cell>(n, E))) {}
+    GameBoard(int n)
+        : size(n),                                            //
+          board(vector<vector<Cell>>(n, vector<Cell>(n, E))), //
+          x_wins(0),                                          //
+          o_wins(0) {}
 
     /**
      * @brief Prints the board with row and column labels.
@@ -325,14 +329,13 @@ class GameBoard {
         return true;
     }
 
-
     /**
      * @brief Checks whether a index is within board bounds.
      * @param i index, represents column or row since board is a square.
      * @return true if i maps to a valid row/column otherwise false.
      * @pre i is any integer value.
      */
-    bool check_size_bounds(int i) const { 
+    bool check_size_bounds(int i) const {
         return (0 <= i && i < get_size());
     }
 
@@ -344,7 +347,7 @@ class GameBoard {
      * @pre row and column are within bounds.
      */
     Cell get_cell(int row, int column) const {
-        if (check_size_bounds(row) && check_size_bounds(column)){
+        if (check_size_bounds(row) && check_size_bounds(column)) {
             return board[row][column];
         }
     }
@@ -490,7 +493,7 @@ class Human : public Player {
             cin >> row >> col;
 
             cin.ignore(1000, '\n');
-            console.pop(true);
+            console.pop(1);
 
             if (!game_board.check_row_bounds(row)) {
                 console.push(Block(
@@ -536,7 +539,7 @@ class Human : public Player {
             symbol = to_lower(symbol);
 
             cin.ignore(1000, '\n');
-            console.pop(true);
+            console.pop(1);
 
             if (symbol != 'o' && symbol != 'x') {
                 console.push(Block(
@@ -580,17 +583,16 @@ class Computer : public Player {
      */
     Move get_move(const GameBoard& game_board, ConsoleRenderer& console) const override {}
 
-
     // returns all valid moves that computer can choose from
     vector<Move> get_valid(const GameBoard& game_board) const {
         vector<Move> availableMoves = {};
         int gameboardSize = game_board.get_size();
 
-        for (int row; row < gameboardSize; row++){
-            for (int column; column < gameboardSize; column++){
-                Cell currentSymbol = game_board.get_cell(row,column);
-                if (currentSymbol == E){
-                    Move newMove(row,column,E);
+        for (int row; row < gameboardSize; row++) {
+            for (int column; column < gameboardSize; column++) {
+                Cell currentSymbol = game_board.get_cell(row, column);
+                if (currentSymbol == E) {
+                    Move newMove(row, column, E);
                 }
             }
         }
@@ -676,7 +678,7 @@ class Game {
             "\nPress enter to begin:"
         ));
         cin.get();
-        console.pop(true);
+        console.pop(1);
     }
 
     /**
@@ -690,7 +692,7 @@ class Game {
         int size;
         while (true) {
             getline(cin, input);
-            console.pop(true);
+            console.pop(1);
 
             try {
                 size = stoi(input);

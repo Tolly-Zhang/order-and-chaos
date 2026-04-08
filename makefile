@@ -24,7 +24,7 @@ CPPFLAGS = -std=c++17 -Wall -Wextra -Werror -Wfatal-errors -Wno-sign-compare -Wn
 
 # Quick compile and run for testing. Does not use the CPPFLAGS, so it will compile even if there are warnings.
 quick : a5.cpp
-	g++ a5.cpp -o a5 && ./a5 && rm a5
+	g++ a5.cpp -o a5 -w && ./a5 && rm a5
 
 compile : a5.cpp
 	g++ $(CPPFLAGS) a5.cpp -o a5

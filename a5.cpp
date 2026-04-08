@@ -325,6 +325,30 @@ class GameBoard {
         return true;
     }
 
+
+    /**
+     * @brief Checks whether a index is within board bounds.
+     * @param i index, represents column or row since board is a square.
+     * @return true if i maps to a valid row/column otherwise false.
+     * @pre i is any integer value.
+     */
+    bool check_size_bounds(int i) const { 
+        return (0 <= i && i < get_size());
+    }
+
+    /**
+     * @brief Returns a move given a row and column
+     * @param row index, represents row of the board starting at top.
+     * @param column index, represents column of the board starting at left.
+     * @return Cell, either E, O or X.
+     * @pre row and column are within bounds.
+     */
+    Cell get_cell(int row, int column) const {
+        if (check_size_bounds(row) && check_size_bounds(column)){
+            return board[row][column];
+        }
+    }
+
   private:
     static constexpr char ROW_LABEL_START = 'A';
     static constexpr int COL_LABEL_START = 1;
@@ -555,6 +579,22 @@ class Computer : public Player {
      * @pre Method implementation must return a valid move.
      */
     Move get_move(const GameBoard& game_board, ConsoleRenderer& console) const override {}
+
+
+    // returns all valid moves that computer can choose from
+    vector<Move> get_valid(const GameBoard& game_board) const {
+        vector<Move> availableMoves = {};
+        int gameboardSize = game_board.get_size();
+
+        for (int row; row < gameboardSize; row++){
+            for (int column; column < gameboardSize; column++){
+                Cell currentSymbol = game_board.get_cell(row,column);
+                if (currentSymbol == E){
+                    Move newMove(row,column,E);
+                }
+            }
+        }
+    }
 
   private:
 };

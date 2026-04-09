@@ -170,12 +170,10 @@ class ConsoleRenderer {
      * @pre None.
      * @post If a block existed, the most recent one is removed.
      */
-    void pop(int extra_lines = 0) {
-        if (blocks.empty()) return;
-        erase(blocks.back().lines + extra_lines);
-        lines -= blocks.back().lines;
-        blocks.pop_back();
+    void pop() {
+        pop(0);
     }
+
     void pop_prompt() {
         pop(1);
     }
@@ -217,9 +215,17 @@ class ConsoleRenderer {
     }
 
   private:
+    void pop(int extra_lines) {
+        if (blocks.empty()) return;
+        erase(blocks.back().lines + extra_lines);
+        lines -= blocks.back().lines;
+        blocks.pop_back();
+    }
+
     void erase_line() {
         cout << "\x1B[2K";
     }
+
     void move_cursor_up() {
         cout << "\x1B[1A";
     }
@@ -354,6 +360,10 @@ class GameBoard {
         if (check_size_bounds(row) && check_size_bounds(column)) {
             return board[row][column];
         }
+    }
+
+    bool is_empty(int row, int column) const {
+        return get_cell(row, column) == E;
     }
 
   private:
@@ -523,6 +533,7 @@ class Human : public Player {
                 );
                 continue;
             }
+
             if (!game_board->check_column_bounds(col)) {
                 console.push(
                     "\n" + to_string(col) +

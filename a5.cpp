@@ -611,7 +611,18 @@ class Computer : public Player {
      * @return Computer-selected move.
      * @pre Method implementation must return a valid move.
      */
-    Move get_move(const GameBoard* game_board, ConsoleRenderer& console) const override {}
+    Move get_move(const GameBoard* game_board, ConsoleRenderer& console) const override {
+        vector<Move> availableMoves = get_valid(game_board);
+        int totalMoves = availableMoves.size();
+        Move selectedMove = availableMoves[rand()%totalMoves];
+
+        if (totalMoves <= 0){
+            // no moves left
+            // add a game over message
+            console.push("\nGame over!");
+        }
+        return selectedMove;
+    }
 
     // returns all valid moves that computer can choose from
     vector<Move> get_valid(const GameBoard* game_board) const {
@@ -626,6 +637,8 @@ class Computer : public Player {
                 }
             }
         }
+
+        return availableMoves;
     }
 
   private:

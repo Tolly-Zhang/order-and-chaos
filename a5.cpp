@@ -469,7 +469,7 @@ class Human : public Player {
      * @brief Constructs a default human player named "Player" as ORDER.
      * @post Human player is initialized with default identity.
      */
-    Human() : Human(ORDER) {}
+    Human() = delete;
 
     /**
      * @brief Constructs a human player with explicit identity.
@@ -594,7 +594,7 @@ class Computer : public Player {
      * @brief Constructs a default computer player named "Computer" as CHAOS.
      * @post Computer player is initialized with default identity.
      */
-    Computer() : Computer(CHAOS) {}
+    Computer() = delete;
 
     /**
      * @brief Constructs a computer player with explicit identity.
@@ -614,9 +614,9 @@ class Computer : public Player {
     Move get_move(const GameBoard* game_board, ConsoleRenderer& console) const override {
         vector<Move> availableMoves = get_valid(game_board);
         int totalMoves = availableMoves.size();
-        Move selectedMove = availableMoves[rand()%totalMoves];
+        Move selectedMove = availableMoves[rand() % totalMoves];
 
-        if (totalMoves <= 0){
+        if (totalMoves <= 0) {
             // no moves left
             // add a game over message
             console.push("\nGame over!");

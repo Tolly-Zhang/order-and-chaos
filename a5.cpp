@@ -514,32 +514,28 @@ class Human : public Player {
             to_string(game_board->get_col_start()) + " to " +
             to_string(game_board->get_col_start() + game_board->get_size() - 1);
 
-        console.push(Block(
-            "\nEnter a coordinate in the format of [row] [col] from " + //
-            row_range + " and " + col_range + ": "
-        ));
-
         char row;
         int col;
+
+        string prompt = "\nEnter a coordinate in the format of [row] [col] from " + //
+                        row_range + " and " + col_range + ": ";
         while (true) {
+            console.push(prompt);
             cin >> row >> col;
             cin.ignore(1000, '\n');
             console.pop_prompt();
 
             if (!game_board->check_row_bounds(row)) {
-                console.push(
-                    "\n" + to_string(row) +
-                    " is not a valid row. Please enter a row from " + row_range + ": "
-                );
+                prompt = "\n" + to_string(row) +
+                         " is not a valid row. Please enter a row from " + //
+                         row_range + ": ";
                 continue;
             }
 
             if (!game_board->check_column_bounds(col)) {
-                console.push(
-                    "\n" + to_string(col) +
-                    " is not a valid column. Please enter a column from " + col_range +
-                    ": "
-                );
+                prompt = "\n" + to_string(col) +
+                         " is not a valid column. Please enter a column from " + //
+                         col_range + ": ";
                 continue;
             }
             break;
@@ -560,28 +556,27 @@ class Human : public Player {
         Move& move,              //
         ConsoleRenderer& console //
     ) const {
-        char symbol;
+        char c;
         Cell cell;
 
-        console.push("\nEnter a symbol (x or o): ");
-
+        string prompt = "\nEnter a symbol (x or o): ";
         while (true) {
-            cin >> symbol;
+            console.push(prompt);
+            cin >> c;
             cin.ignore(1000, '\n');
-            symbol = to_lower(symbol);
+            c = to_lower(c);
             console.pop_prompt();
 
-            if (symbol != 'o' && symbol != 'x') {
-                console.push(
-                    "\n" + to_string(symbol) + " is not a valid symbol. Enter x or o:"
-                );
+            if (!(c == 'o' || c == 'x')) {
+                prompt = "\n" + to_string(c) + //
+                         " is not a valid symbol. Enter x or o:";
                 continue;
             }
 
-            cell = (symbol == 'x') ? X : O;
-            move.symbol = cell;
             break;
         }
+        cell = (c == 'x') ? X : O;
+        move.symbol = cell;
     }
 };
 
@@ -724,7 +719,7 @@ class Game {
         return false;
     }
 
-    void display(string& str) {
+    void display(const string& str) {
         console.push(Block(str));
         wait_for_enter();
         console.pop();
@@ -742,15 +737,13 @@ class Game {
      * @post Intro text has been displayed and dismissed.
      */
     void introduction() {
-        console.push( //
+        display( //
             "\nWelcome to Order and Chaos!"
             "\nIn this game, two players take turns placing Os and Xs onto the board."
             "\nEach turn, both players can choose whether to place an O or and X."
             "\nOrder wins if they can place 5 Xs or Os in a row. Chaos wins if they can "
             "prevent this."
         );
-        wait_for_enter();
-        console.pop();
     }
 
     /**
@@ -759,35 +752,30 @@ class Game {
      * @post game_board is set to a size between 6 and 9.
      */
     void setup_board() {
-        console.push("\nEnter a board size from 6 to 9: ");
+        string prompt = "\nEnter a board size from 6 to 9: ";
         string input;
         int size;
         while (true) {
+            console.push(prompt);
             getline(cin, input);
             console.pop_prompt();
 
             if (input.empty()) {
-                console.push( //
-                    "\nNo input detected. Please enter a board size from 6 to 9: ")
-                ;
+                prompt = "\nNo input detected. Please enter a board size from 6 to 9: ";
                 continue;
             }
 
             try {
                 size = stoi(input);
             } catch (...) {
-                console.push(
-                    "\n" + input +
-                    " is not an integer. Please enter an integer from 6 to 9: "
-                );
+                prompt = "\n" + input +
+                         " is not an integer. Please enter an integer from 6 to 9: ";
                 continue;
             }
 
             if (!(size >= 6 && size <= 9)) {
-                console.push(
-                    "\n" + to_string(size) +
-                    " is not a valid board size. Please enter one from 6 to 9: "
-                );
+                prompt = "\n" + to_string(size) +
+                         " is not a valid board size. Please enter one from 6 to 9: ";
                 continue;
             }
             break;
@@ -804,6 +792,7 @@ class Game {
         int num = rand() % 2;
         PlayerType p1_type = (num == 0) ? ORDER : CHAOS;
         PlayerType p2_type = (num == 0) ? CHAOS : ORDER;
+
         num = rand() % 2;
         if (num == 0) {
             player1 = new Human(p1_type);
@@ -815,20 +804,16 @@ class Game {
     }
 
     void print_player_roles() {
-        console.push(
+        display(
             "\nPlayer 1 is " + to_string(player1->get_type()) + //
             " and Player 2 is " + to_string(player2->get_type()) + "."
         );
-        wait_for_enter();
-        console.pop();
     }
     void print_player_order() {
-        console.push(
+        display(
             "\nPlayer 1 goes first, followed by Player 2. " //
             "\nLet's begin."
         );
-        wait_for_enter();
-        console.pop();
     }
 };
 

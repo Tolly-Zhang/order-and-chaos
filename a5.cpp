@@ -35,6 +35,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <unistd.h>
 #include <vector>
@@ -53,6 +54,14 @@ char to_lower(char c) {
         return c + 32;
     }
     return c;
+}
+
+bool is_alpha(char c) {
+    return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
+}
+
+string to_string(char c) {
+    return string(1, c);
 }
 
 /**
@@ -138,7 +147,7 @@ struct Block {
     }
 };
 
-class ConsoleRenderer {
+class Console {
   public:
     vector<Block> blocks;
     int lines;
@@ -146,7 +155,11 @@ class ConsoleRenderer {
      * @brief Creates an empty renderer state.
      * @post No blocks are stored and lines == 0.
      */
-    ConsoleRenderer() : lines(0) {}
+    Console() : lines(0) {}
+
+    size_t size() const {
+        return blocks.size();
+    }
 
     /**
      * @brief Adds a block to the render stack and redraws.
@@ -164,6 +177,14 @@ class ConsoleRenderer {
         push(Block(text));
     }
 
+    void overwrite(const size_t i, const string& text) {
+        if (i >= blocks.size()) return;
+        lines -= blocks[i].lines;
+        blocks[i] = Block(text);
+        lines += blocks[i].lines;
+        refresh();
+    }
+
     /**
      * @brief Removes the newest block and redraws.
      * @param extra_lines Number of additional input lines to clear.
@@ -172,6 +193,17 @@ class ConsoleRenderer {
      */
     void pop() {
         pop(0);
+    }
+
+    stringstream read(const string& prompt) {
+        push(prompt);
+
+        string input;
+        getline(cin, input);
+        pop_prompt();
+
+        stringstream ss(input);
+        return ss;
     }
 
     void pop_prompt() {
@@ -264,29 +296,6 @@ class GameBoard {
           o_wins(0) {}
 
     /**
-     * @brief Prints the board with row and column labels.
-     * @return Multiline board representation with coordinate labels.
-     * @post Returned string ends with a newline.
-     */
-    string str() const {
-        string out = "\n";
-        int width = column_width() + 1;
-        out += string(width, ' ');
-        for (int i = COL_LABEL_START; i <= int(size); ++i) {
-            append_aligned(out, to_string(i), width);
-        }
-        out += "\n";
-        for (size_t r = 0; r < size; ++r) {
-            append_aligned(out, string(1, char(ROW_LABEL_START + r)), width);
-            for (size_t c = 0; c < size; ++c) {
-                append_aligned(out, to_string(board[r][c]), width);
-            }
-            out += "\n";
-        }
-        return out;
-    }
-
-    /**
      * @brief Returns the board dimension.
      * @return Number of rows/columns in the board.
      * @pre None.
@@ -300,7 +309,7 @@ class GameBoard {
      * @return Starting row label character.
      * @pre None.
      */
-    char get_row_start() const {
+    char get_row_start_label() const {
         return ROW_LABEL_START;
     }
 
@@ -309,7 +318,7 @@ class GameBoard {
      * @return Starting column number.
      * @pre None.
      */
-    int get_col_start() const {
+    int get_col_start_label() const {
         return COL_LABEL_START;
     }
 
@@ -339,14 +348,11 @@ class GameBoard {
         return true;
     }
 
-    /**
-     * @brief Checks whether a index is within board bounds.
-     * @param i index, represents column or row since board is a square.
-     * @return true if i maps to a valid row/column otherwise false.
-     * @pre i is any integer value.
-     */
-    bool check_size_bounds(int i) const {
-        return (0 <= i && i < get_size());
+    size_t row(const char r) const {
+        return r - ROW_LABEL_START;
+    }
+    size_t col(const int c) const {
+        return c - COL_LABEL_START;
     }
 
     /**
@@ -356,19 +362,21 @@ class GameBoard {
      * @return Cell, either E, O or X.
      * @pre row and column are within bounds.
      */
-    Cell get_cell(int row, int column) const {
-        if (check_size_bounds(row) && check_size_bounds(column)) {
-            return board[row][column];
-        }
+    Cell at(size_t row, size_t column) const {
+        return board[row][column];
     }
 
-    bool is_empty(int row, int column) const {
-        return get_cell(row, column) == E;
+    void place(const Move& move) {
+        board[move.row][move.col] = move.symbol;
+    }
+
+    bool is_empty(size_t r, size_t c) const {
+        return at(r, c) == E;
     }
 
   private:
-    static constexpr char ROW_LABEL_START = 'A';
-    static constexpr int COL_LABEL_START = 1;
+    const char ROW_LABEL_START = 'a';
+    const int COL_LABEL_START = 1;
     /**
      * @brief Represents the possible winning conditions for a player, including rows,
      * columns, and diagonals. Each condition is represented as a boolean indicating
@@ -398,24 +406,39 @@ class GameBoard {
     vector<vector<Cell>> board;
     Wins o_wins;
     Wins x_wins;
-
-    /**
-     * @brief Computes width needed to align board columns.
-     * @return Number of digits in board size.
-     * @pre size >= 0.
-     */
-    int column_width() const {
-        return to_string(size).length();
-    }
-
-    static void append_aligned(string& text, const string& value, int width) {
-        int padding = width - static_cast<int>(value.length());
-        if (padding > 0) {
-            text += string(padding, ' ');
-        }
-        text += value;
-    }
 };
+
+string to_string(const GameBoard* board) {
+    auto append_aligned = [](std::string& text, const std::string& str, const int width) {
+        int padding = width - int(str.length());
+        if (padding > 0) {
+            text += std::string(padding, ' ');
+        }
+        text += str;
+    };
+
+    string output = "";
+    int width = to_string(board->get_size()).length() + 1;
+    int row_label = board->get_row_start_label();
+    int col_label = board->get_col_start_label();
+    int size = int(board->get_size());
+
+    output += string(width, ' ');
+
+    for (int i = 0; i < size; ++i) {
+        append_aligned(output, to_string(char(col_label + i)), width);
+    }
+
+    for (size_t r = 0; r < size; ++r) {
+        output += "\n";
+        append_aligned(output, to_string(char(row_label + r)), width);
+        for (size_t c = 0; c < size; ++c) {
+            append_aligned(output, to_string(board->at(r, c)), width);
+        }
+    }
+
+    return output;
+}
 
 /**
  * @brief Represents a player in the game, which can be either a human or a computer.
@@ -450,7 +473,7 @@ class Player {
      */
     virtual Move get_move(
         const GameBoard* game_board, //
-        ConsoleRenderer& console
+        Console& console
     ) const = 0;
 
   private:
@@ -486,7 +509,7 @@ class Human : public Player {
      * @return A validated move with row, column, and symbol.
      * @pre game_board has valid coordinate bounds.
      */
-    Move get_move(const GameBoard* game_board, ConsoleRenderer& console) const override {
+    Move get_move(const GameBoard* game_board, Console& console) const override {
         Move move(0, 0, X);
         set_coords(move, game_board, console);
         set_symbol(move, console);
@@ -505,43 +528,69 @@ class Human : public Player {
     void set_coords(
         Move& move,                  //
         const GameBoard* game_board, //
-        ConsoleRenderer& console     //
+        Console& console             //
     ) const {
-        string row_range =
-            to_string(game_board->get_row_start()) + " to " +
-            to_string(game_board->get_row_start() + game_board->get_size() - 1);
-        string col_range =
-            to_string(game_board->get_col_start()) + " to " +
-            to_string(game_board->get_col_start() + game_board->get_size() - 1);
+        char row_start = game_board->get_row_start_label();
+        char row_end = char(row_start + game_board->get_size() - 1);
+        int col_start = game_board->get_col_start_label();
+        int col_end = col_start + game_board->get_size() - 1;
 
-        char row;
-        int col;
+        string row_range = to_string(row_start) + " to " + to_string(row_end);
+        string col_range = to_string(col_start) + " to " + to_string(col_end);
 
-        string prompt = "\nEnter a coordinate in the format of [row] [col] from " + //
-                        row_range + " and " + col_range + ": ";
+        char row_input;
+        int col_input;
+        size_t row;
+        size_t col;
+        string question = "Please enter a row from " + row_range + //
+                          " and a column from " + col_range + ": ";
+        string prompt = "\n" + question;
         while (true) {
-            console.push(prompt);
-            cin >> row >> col;
-            cin.ignore(1000, '\n');
-            console.pop_prompt();
+            stringstream input = console.read(prompt);
+            input >> row_input >> col_input;
 
-            if (!game_board->check_row_bounds(row)) {
-                prompt = "\n" + to_string(row) +
-                         " is not a valid row. Please enter a row from " + //
-                         row_range + ": ";
+            if (input.fail()) {
+                prompt =
+                    "\n\"" + input.str() + "\" is not a valid coordinate. " + question;
                 continue;
             }
 
-            if (!game_board->check_column_bounds(col)) {
-                prompt = "\n" + to_string(col) +
-                         " is not a valid column. Please enter a column from " + //
-                         col_range + ": ";
+            string prompt_invalid_row =
+                "\n\"" + to_string(row_input) + "\" is not a valid row. " + question;
+            string prompt_invalid_col =
+                "\n\"" + to_string(col_input) + "\" is not a valid column. " + question;
+
+            if (!(is_alpha(row_input))) {
+                prompt = prompt_invalid_row;
+                continue;
+            }
+
+            row_input = to_lower(row_input);
+
+            if (!game_board->check_row_bounds(row_input)) {
+                prompt = prompt_invalid_row;
+                continue;
+            }
+
+            if (!game_board->check_column_bounds(col_input)) {
+                prompt = prompt_invalid_col;
+                continue;
+            }
+
+            row = game_board->row(row_input);
+            col = game_board->col(col_input);
+
+            if (!game_board->is_empty(row, col)) {
+                Cell cell = game_board->at(row, col);
+                prompt = "\n(" + to_string(row_input) + ", " + to_string(col_input) +
+                         ") is already taken (" + to_string(cell) +
+                         "). Please enter an empty coordinate: ";
                 continue;
             }
             break;
         }
-        move.row = row - game_board->get_row_start();
-        move.col = col - game_board->get_col_start();
+        move.row = row;
+        move.col = col;
     }
 
     /**
@@ -553,26 +602,31 @@ class Human : public Player {
      * @post move.symbol is set to X or O.
      */
     void set_symbol(
-        Move& move,              //
-        ConsoleRenderer& console //
+        Move& move,      //
+        Console& console //
     ) const {
         char c;
         Cell cell;
-
-        string prompt = "\nEnter a symbol (x or o): ";
+        string question = "Please enter a symbol (x or o): ";
+        string prompt = "\n" + question;
         while (true) {
-            console.push(prompt);
-            cin >> c;
-            cin.ignore(1000, '\n');
-            c = to_lower(c);
-            console.pop_prompt();
+            stringstream input = console.read(prompt);
+            input >> c;
 
-            if (!(c == 'o' || c == 'x')) {
-                prompt = "\n" + to_string(c) + //
-                         " is not a valid symbol. Enter x or o:";
+            string prompt_invalid_symbol =
+                "\n\"" + input.str() + "\" is not a valid symbol. " + question;
+
+            if (input.fail()) {
+                prompt = prompt_invalid_symbol;
                 continue;
             }
 
+            c = to_lower(c);
+
+            if (!(c == 'o' || c == 'x')) {
+                prompt = prompt_invalid_symbol;
+                continue;
+            }
             break;
         }
         cell = (c == 'x') ? X : O;
@@ -606,34 +660,28 @@ class Computer : public Player {
      * @return Computer-selected move.
      * @pre Method implementation must return a valid move.
      */
-    Move get_move(const GameBoard* game_board, ConsoleRenderer& console) const override {
-        vector<Move> availableMoves = get_valid(game_board);
-        int totalMoves = availableMoves.size();
-        Move selectedMove = availableMoves[rand() % totalMoves];
-
-        if (totalMoves <= 0) {
-            // no moves left
-            // add a game over message
-            console.push("\nGame over!");
-        }
-        return selectedMove;
+    Move get_move(const GameBoard* game_board, Console& console) const override {
+        vector<Move> available_moves = get_valid(game_board);
+        int total_moves = available_moves.size();
+        Move move = available_moves[rand() % total_moves];
+        return move;
     }
 
     // returns all valid moves that computer can choose from
     vector<Move> get_valid(const GameBoard* game_board) const {
-        vector<Move> availableMoves = {};
-        int gameboardSize = game_board->get_size();
+        vector<Move> available_moves = {};
+        int size = game_board->get_size();
 
-        for (int row; row < gameboardSize; row++) {
-            for (int column; column < gameboardSize; column++) {
-                Cell currentSymbol = game_board->get_cell(row, column);
-                if (currentSymbol == E) {
-                    Move newMove(row, column, E);
+        for (size_t r = 0; r < size; r++) {
+            for (size_t c = 0; c < size; c++) {
+                Cell symbol = game_board->at(r, c);
+                if (symbol == E) {
+                    Move move(r, c, X);
+                    available_moves.push_back(move);
                 }
             }
         }
-
-        return availableMoves;
+        return available_moves;
     }
 
   private:
@@ -650,21 +698,16 @@ class Game {
      * @post Game object is ready for initialization via play/start.
      */
     Game()
-        : game_board(nullptr),         //
-          game_board_display(nullptr), //
-          player1(nullptr),            //
-          player2(nullptr),            //
+        : game_board(nullptr), //
+          player1(nullptr),    //
+          player2(nullptr),    //
           console() {}
 
     void play() {
         bool repeat = true;
         start();
-        console.push(game_board->str());
         sleep(1);
-        console.pop();
-        sleep(1);
-        console.push("\nGame over!");
-        sleep(1);
+        cycle_turns();
     }
 
     ~Game() {
@@ -675,10 +718,10 @@ class Game {
 
   private:
     GameBoard* game_board;
-    string* game_board_display;
     Player* player1;
     Player* player2;
-    ConsoleRenderer console;
+    Console console;
+    size_t console_game_board;
 
     /**
      * @brief Runs full game sessions until the players choose to
@@ -693,11 +736,13 @@ class Game {
      * @post Board has been configured by user input.
      */
     void start() {
+        title();
         introduction();
         setup_board();
         setup_players();
         print_player_roles();
         print_player_order();
+        setup_console();
     }
 
     /**
@@ -706,8 +751,13 @@ class Game {
      * @pre player is a valid initialized Player object.
      * @post A move is requested from player.
      */
-    void turn(Player& player) {
-        Move move = player.get_move(game_board, console);
+    void cycle_turns() {
+        while (true) {
+            game_board->place(player1->get_move(game_board, console));
+            console.overwrite(console_game_board, to_string(game_board));
+            game_board->place(player2->get_move(game_board, console));
+            console.overwrite(console_game_board, to_string(game_board));
+        }
     }
 
     /**
@@ -726,10 +776,10 @@ class Game {
     }
 
     void wait_for_enter() {
-        console.push("\nPress Enter to continue>");
-        cin.get();
-        console.pop_prompt();
+        console.read("\nPress Enter to continue: ");
     }
+
+    void title() {}
 
     /**
      * @brief Shows opening instructions and waits for Enter.
@@ -753,23 +803,15 @@ class Game {
      */
     void setup_board() {
         string prompt = "\nEnter a board size from 6 to 9: ";
-        string input;
         int size;
         while (true) {
-            console.push(prompt);
-            getline(cin, input);
-            console.pop_prompt();
+            stringstream input = console.read(prompt);
 
-            if (input.empty()) {
-                prompt = "\nNo input detected. Please enter a board size from 6 to 9: ";
-                continue;
-            }
+            input >> size;
 
-            try {
-                size = stoi(input);
-            } catch (...) {
-                prompt = "\n" + input +
-                         " is not an integer. Please enter an integer from 6 to 9: ";
+            if (input.fail()) {
+                prompt = "\n\"" + input.str() +
+                         "\" is not an integer. Please enter an integer from 6 to 9: ";
                 continue;
             }
 
@@ -814,6 +856,12 @@ class Game {
             "\nPlayer 1 goes first, followed by Player 2. " //
             "\nLet's begin."
         );
+    }
+
+    void setup_console() {
+        console.push("\nHere's the initial game board:");
+        console.push(to_string(game_board));
+        console_game_board = console.size() - 1;
     }
 };
 

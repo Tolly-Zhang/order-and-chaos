@@ -139,7 +139,7 @@ struct Block {
      * @brief Builds a block from text and counts its display lines.
      * @param t Text to display.
      * @pre t may be empty.
-     * @post text == t and lines == number of '\n' in t + 1.
+     * @post text == t and lines == number of '\n' in t.
      */
     Block(const string& t) {
         text = t;
@@ -179,9 +179,7 @@ class Console {
 
     void overwrite(const size_t i, const string& text) {
         if (i >= blocks.size()) return;
-        lines -= blocks[i].lines;
         blocks[i] = Block(text);
-        lines += blocks[i].lines;
         refresh();
     }
 
@@ -196,6 +194,7 @@ class Console {
     }
 
     stringstream read(const string& prompt) {
+        clear_input_buffer();
         push(prompt);
 
         string input;
@@ -252,6 +251,14 @@ class Console {
         erase(blocks.back().lines + extra_lines);
         lines -= blocks.back().lines;
         blocks.pop_back();
+    }
+
+    void clear_input_buffer() {
+        if (!cin.good()) cin.clear();
+        while (cin.rdbuf()->in_avail() > 0) {
+            string junk;
+            getline(cin, junk);
+        }
     }
 
     void erase_line() {
@@ -417,24 +424,38 @@ string to_string(const GameBoard* board) {
         text += str;
     };
 
-    string output = "";
-    int width = to_string(board->get_size()).length() + 1;
-    int row_label = board->get_row_start_label();
+    auto separator = [](const int width, const int size) {
+        string separator = "\n     +--";
+        for (size_t c = 1; c < size; ++c) {
+            separator += "-+--";
+        }
+        separator += "-+";
+        return separator;
+    };
+
+    int width = to_string(board->get_size()).length() + 3;
+    char row_label = board->get_row_start_label();
     int col_label = board->get_col_start_label();
     int size = int(board->get_size());
 
-    output += string(width, ' ');
+    string row_separator = separator(width, size);
+
+    string output;
+    output += "\n    ";
 
     for (int i = 0; i < size; ++i) {
-        append_aligned(output, to_string(char(col_label + i)), width);
+        append_aligned(output, to_string(col_label + i), width);
     }
-
+    output += row_separator;
     for (size_t r = 0; r < size; ++r) {
         output += "\n";
         append_aligned(output, to_string(char(row_label + r)), width);
         for (size_t c = 0; c < size; ++c) {
-            append_aligned(output, to_string(board->at(r, c)), width);
+            output += " |";
+            append_aligned(output, to_string(board->at(r, c)), width - 2);
         }
+        output += " |";
+        output += row_separator;
     }
 
     return output;
@@ -859,9 +880,9 @@ class Game {
     }
 
     void setup_console() {
-        console.push("\nHere's the initial game board:");
         console.push(to_string(game_board));
         console_game_board = console.size() - 1;
+        console.push("\n");
     }
 };
 
@@ -872,6 +893,7 @@ class Game {
  */
 int main() {
     srand(time(nullptr));
+    Console console;
     Game game;
     game.play();
 } // main

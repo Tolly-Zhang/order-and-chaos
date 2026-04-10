@@ -205,10 +205,7 @@ class Console {
         return ss;
     }
 
-    void pop_prompt() {
-        pop(1);
-    }
-
+  private:
     /**
      * @brief Recomputes total line count and redraws all blocks.
      * @pre Internal block list is valid.
@@ -233,6 +230,17 @@ class Console {
         }
     }
 
+    void pop(int extra_lines) {
+        if (blocks.empty()) return;
+        erase(blocks.back().lines + extra_lines);
+        lines -= blocks.back().lines;
+        blocks.pop_back();
+    }
+
+    void pop_prompt() {
+        pop(1);
+    }
+
     void erase() {
         erase_line();
         move_cursor_up();
@@ -243,14 +251,6 @@ class Console {
         for (int i = 0; i < n; i++) {
             erase();
         }
-    }
-
-  private:
-    void pop(int extra_lines) {
-        if (blocks.empty()) return;
-        erase(blocks.back().lines + extra_lines);
-        lines -= blocks.back().lines;
-        blocks.pop_back();
     }
 
     void clear_input_buffer() {

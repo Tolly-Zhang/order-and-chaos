@@ -295,10 +295,8 @@ class GameBoard {
      * @post get_size() == n and every board cell is E.
      */
     GameBoard(int n)
-        : size(n),                                            //
-          board(vector<vector<Cell>>(n, vector<Cell>(n, E))), //
-          x_wins(0),                                          //
-          o_wins(0) {}
+        : size(n), //
+          board(vector<vector<Cell>>(n, vector<Cell>(n, E))) {}
 
     /**
      * @brief Returns the board dimension.
@@ -387,36 +385,9 @@ class GameBoard {
   private:
     const char ROW_LABEL_START = 'a';
     const int COL_LABEL_START = 1;
-    /**
-     * @brief Represents the possible winning conditions for a player, including rows,
-     * columns, and diagonals. Each condition is represented as a boolean indicating
-     * whether it is still possible for that player to win in that way.
-     */
-    struct Wins {
-        int wins;
-        vector<vector<bool>> rows;
-        vector<vector<bool>> cols;
-        vector<vector<bool>> left_diag;
-        vector<vector<bool>> right_diag;
-
-        /**
-         * @brief Initializes all possible win paths as available.
-         * @param n Board dimension.
-         * @pre n >= 0.
-         * @post wins == 4 * n * n and every path flag is true.
-         */
-        Wins(size_t n)
-            : wins(4 * n * n),                     //
-              rows(n, vector<bool>(n, true)),      //
-              cols(n, vector<bool>(n, true)),      //
-              left_diag(n, vector<bool>(n, true)), //
-              right_diag(n, vector<bool>(n, true)) {}
-    };
     size_t size;
     vector<vector<Cell>> board;
     bool game_over;
-    Wins o_wins;
-    Wins x_wins;
 
     bool check_win(const Move& move) {
         if (check_win_direction(move, 0, 1) || //
@@ -552,6 +523,8 @@ class Player {
         const GameBoard* board, //
         Console& console
     ) = 0;
+
+    virtual ~Player() = default;
 
   private:
     /**
@@ -796,6 +769,8 @@ class SmartComputer : public Computer {
     SmartComputer(PlayerType type) : Computer(type) {}
 
     Move get_move(const GameBoard* board, Console& console) override {
+        (void)board;
+        (void)console;
         return Move(0, 0, X);
     }
 };

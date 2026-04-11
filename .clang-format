@@ -47,7 +47,7 @@ AllowShortFunctionsOnASingleLine: Empty
 #   WithoutElse   →  one line only if there's no else branch
 #   OnlyFirstIf   →  one line for the if, but not else-if or else
 #   AllIfsAndElse →  one line for everything including else
-AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 
 # Whether template<...> always gets its own line before the declaration.
 #   No        →  never force a break

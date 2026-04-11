@@ -295,8 +295,9 @@ class GameBoard {
      * @post get_size() == n and every board cell is E.
      */
     GameBoard(int n)
-        : size(n), //
-          board(vector<vector<Cell>>(n, vector<Cell>(n, E))) {}
+        : board(vector<vector<Cell>>(n, vector<Cell>(n, E))), //
+          size(n),                                            //
+          game_over(false) {}
 
     /**
      * @brief Returns the board dimension.
@@ -378,16 +379,27 @@ class GameBoard {
         return game_over;
     }
 
+    bool is_full() const {
+        for (vector<Cell> row : board) {
+            for (Cell cell : row) {
+                if (cell == E) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     bool is_empty(size_t r, size_t c) const {
         return at(r, c) == E;
     }
 
   private:
+    vector<vector<Cell>> board;
+    size_t size;
+    bool game_over;
     const char ROW_LABEL_START = 'a';
     const int COL_LABEL_START = 1;
-    size_t size;
-    vector<vector<Cell>> board;
-    bool game_over;
 
     bool check_win(const Move& move) {
         if (check_win_direction(move, 0, 1) || //
@@ -524,9 +536,14 @@ class Player {
         Console& console
     ) = 0;
 
+    bool has_resigned() const {
+        return resigned;
+    }
+
     virtual ~Player() = default;
 
-  private:
+  protected:
+    bool resigned = false;
     /**
      * @brief Identifies whether a player is trying to create order or chaos.
      */
@@ -581,7 +598,7 @@ class Human : public Player {
         Move& move,             //
         const GameBoard* board, //
         Console& console        //
-    ) const {
+    ) {
         char row_start = board->get_row_start_label();
         char row_end = char(row_start + board->get_size() - 1);
         int col_start = board->get_col_start_label();
@@ -595,9 +612,15 @@ class Human : public Player {
         size_t row;
         size_t col;
 
-        Block prompt({"", "Please enter a row from " + range});
+        Block prompt({"", "Please enter a coordinate from " + range + " or (quit)"});
         while (true) {
             stringstream input = console.ask(prompt);
+
+            if (input.str() == "quit") {
+                resigned = true;
+                return;
+            }
+
             input >> row_input >> col_input;
             if (input.fail()) {
                 prompt.text[0] = "Invalid input. ";
@@ -678,35 +701,6 @@ class Human : public Player {
     }
 };
 
-class BoardEngine {
-  public:
-    const GameBoard* board;
-
-    BoardEngine() : board(nullptr) {}
-
-    BoardEngine(const GameBoard* board) : board(board) {}
-
-    bool is_board_set() const {
-        return board != nullptr;
-    }
-
-    vector<Move> get_valid_moves() const {
-        vector<Move> available_moves = {};
-        int size = board->get_size();
-
-        for (size_t r = 0; r < size; r++) {
-            for (size_t c = 0; c < size; c++) {
-                Cell symbol = board->at(r, c);
-                if (symbol == E) {
-                    Move move(r, c, X);
-                    available_moves.push_back(move);
-                }
-            }
-        }
-        return available_moves;
-    }
-};
-
 /**
  * @brief Represents a computer player in the game.
  */
@@ -739,6 +733,106 @@ class Computer : public Player {
     ~Computer() {}
 
   protected:
+    class BoardEngine {
+      public:
+        const GameBoard* board;
+
+        BoardEngine() : board(nullptr) {}
+
+        BoardEngine(const GameBoard* board) : board(board) {}
+
+        bool is_board_set() const {
+            return board != nullptr;
+        }
+
+        vector<Move> get_valid_moves() const {
+            vector<Move> available_moves = {};
+            int size = board->get_size();
+
+            for (size_t r = 0; r < size; r++) {
+                for (size_t c = 0; c < size; c++) {
+                    Cell symbol = board->at(r, c);
+                    if (symbol == E) {
+                        available_moves.push_back(Move(r, c, X));
+                        available_moves.push_back(Move(r, c, O));
+                    }
+                }
+            }
+            return available_moves;
+        }
+
+        int evaluate(const GameBoard* board_state) const {
+            return evaluate_symbol(board_state, X) + evaluate_symbol(board_state, O);
+        }
+
+      private:
+        int evaluate_symbol(const GameBoard* board_state, Cell symbol) const {
+            int score = 0;
+            int size = board_state->get_size();
+
+            for (int r = 0; r <= size - 1; ++r) {
+                for (int c = 0; c + 4 <= size - 1; ++c) {
+                    score += calculate_score(board_state, symbol, r, c, 0, 1);
+                }
+            }
+
+            for (int r = 0; r + 4 <= size - 1; ++r) {
+                for (int c = 0; c <= size - 1; ++c) {
+                    score += calculate_score(board_state, symbol, r, c, 1, 0);
+                }
+            }
+
+            for (int r = 0; r + 4 <= size - 1; ++r) {
+                for (int c = 0; c + 4 <= size - 1; ++c) {
+                    score += calculate_score(board_state, symbol, r, c, 1, 1);
+                }
+            }
+
+            for (int r = 0; r + 4 <= size - 1; ++r) {
+                for (int c = 0; c + 4 <= size - 1; ++c) {
+                    score += calculate_score(board_state, symbol, r, c + 4, 1, -1);
+                }
+            }
+
+            return score;
+        }
+
+        int calculate_score(
+            const GameBoard* board_state, //
+            const Cell target,            //
+            int r,                        //
+            int c,                        //
+            const int dr,                 //
+            const int dc
+        ) const {
+            Cell opposite = target == X ? O : X;
+            int target_count = 0;
+            int opposite_count = 0;
+
+            for (int i = 0; i < 5; ++i) {
+                Cell current = board_state->at(r, c);
+                if (current == target) {
+                    ++target_count;
+                } else if (current == opposite) {
+                    ++opposite_count;
+                }
+                r += dr;
+                c += dc;
+            }
+
+            if (target_count > 0 && opposite_count > 0) {
+                return 0;
+            }
+
+            return target_count == 0   ? 0     //
+                   : target_count == 1 ? 1     //
+                   : target_count == 2 ? 10    //
+                   : target_count == 3 ? 100   //
+                   : target_count >= 4 ? 10000 //
+                                       : 0;
+        }
+    };
+
     BoardEngine engine;
 
     void display_move(const Move& move, Console& console) {
@@ -754,13 +848,15 @@ class RandomComputer : public Computer {
 
     Move get_move(const GameBoard* board, Console& console) override {
         Computer::get_move(board, console);
-        vector<Move> valid_moves = engine.get_valid_moves();
+        vector<Move> moves = engine.get_valid_moves();
 
-        int num_moves = valid_moves.size();
+        int num_moves = moves.size();
         int choice = rand() % num_moves;
+        Move move = moves[choice];
+        move.symbol = (rand() % 2 == 0) ? X : O;
 
-        display_move(valid_moves[choice], console);
-        return valid_moves[choice];
+        display_move(move, console);
+        return move;
     }
 };
 
@@ -769,10 +865,50 @@ class SmartComputer : public Computer {
     SmartComputer(PlayerType type) : Computer(type) {}
 
     Move get_move(const GameBoard* board, Console& console) override {
-        (void)board;
-        (void)console;
-        return Move(0, 0, X);
+        Computer::get_move(board, console);
+        Move move(0, 0, X);
+        if (type == ORDER) {
+            move = maximize_score();
+        } else {
+            move = minimize_score();
+        }
+        display_move(move, console);
+        return move;
     }
+
+  private:
+    Move maximize_score() {
+        vector<Move> moves = engine.get_valid_moves();
+        int best_score = -1;
+        Move best_move(0, 0, X);
+        for (Move move : moves) {
+            GameBoard board_copy = *engine.board;
+            board_copy.place(move);
+            int score = engine.evaluate(&board_copy);
+            if (score > best_score) {
+                best_score = score;
+                best_move = move;
+            }
+        }
+        return best_move;
+    }
+    Move minimize_score() {
+        vector<Move> moves = engine.get_valid_moves();
+        int worst_score = 1000000000;
+        Move worst_move(0, 0, X);
+        for (Move move : moves) {
+            GameBoard board_copy = *engine.board;
+            board_copy.place(move);
+            int score = engine.evaluate(&board_copy);
+            if (score < worst_score) {
+                worst_score = score;
+                worst_move = move;
+            }
+        }
+        return worst_move;
+    }
+
+    const int SEARCH_DEPTH = 5;
 };
 
 /**
@@ -786,11 +922,15 @@ class Game {
      * @post Game object is ready for initialization via play/start.
      */
     Game()
-        : board(nullptr),   //
-          player1(nullptr), //
-          player2(nullptr), //
-          console(),        //
-          console_board(0), //
+        : board(nullptr),    //
+          player1(nullptr),  //
+          player2(nullptr),  //
+          order(nullptr),    //
+          chaos(nullptr),    //
+          human(nullptr),    //
+          computer(nullptr), //
+          console(),         //
+          console_board(0),  //
           winner(nullptr) {}
 
     void play() {
@@ -814,8 +954,9 @@ class Game {
 
   private:
     GameBoard* board;
-    Player* player1;
-    Player* player2;
+    Player *player1, *player2;
+    Player *order, *chaos;
+    Human* human;
     Computer* computer;
     Console console;
     size_t console_board;
@@ -852,14 +993,22 @@ class Game {
      * @pre player is a valid initialized Player object.
      * @post A move is requested from player.
      */
-    bool turn(Player* player) {
+    Player* turn(Player* player) {
+
+        if (player->has_resigned()) {
+            return player == order ? chaos : order;
+        }
+
         Move move = player->get_move(board, console);
         board->place(move);
         console.overwrite(console_board, board);
         if (board->is_game_over()) {
-            return true;
+            return order;
         }
-        return false;
+        if (board->is_full()) {
+            return chaos;
+        }
+        return nullptr;
     }
 
     /**
@@ -994,16 +1143,32 @@ class Game {
      */
     void setup_players() {
         int num = rand() % 2;
-        PlayerType p1_type = (num == 0) ? ORDER : CHAOS;
-        PlayerType p2_type = (num == 0) ? CHAOS : ORDER;
+        PlayerType p1_type;
+        PlayerType p2_type;
+
+        if (num == 0) {
+            p1_type = ORDER;
+            p2_type = CHAOS;
+            order = player1;
+            chaos = player2;
+        } else {
+            p1_type = CHAOS;
+            p2_type = ORDER;
+            order = player2;
+            chaos = player1;
+        }
 
         num = rand() % 2;
         if (num == 0) {
-            player1 = new Human(p1_type);
-            player2 = set_computer_difficulty(p2_type);
+            human = new Human(p1_type);
+            computer = set_computer_difficulty(p2_type);
+            player1 = human;
+            player2 = computer;
         } else {
-            player1 = set_computer_difficulty(p1_type);
-            player2 = new Human(p2_type);
+            computer = set_computer_difficulty(p1_type);
+            human = new Human(p2_type);
+            player1 = computer;
+            player2 = human;
         }
 
         string first = num == 0 ? "You" : "The computer";

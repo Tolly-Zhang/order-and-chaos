@@ -549,7 +549,7 @@ class Player {
      * @pre Implementations must return a valid move.
      */
     virtual Move get_move(
-        const GameBoard* game_board, //
+        const GameBoard* board, //
         Console& console
     ) = 0;
 
@@ -586,9 +586,9 @@ class Human : public Player {
      * @return A validated move with row, column, and symbol.
      * @pre game_board has valid coordinate bounds.
      */
-    Move get_move(const GameBoard* game_board, Console& console) override {
+    Move get_move(const GameBoard* board, Console& console) override {
         Move move(0, 0, X);
-        set_coords(move, game_board, console);
+        set_coords(move, board, console);
         set_symbol(move, console);
         return move;
     }
@@ -605,14 +605,14 @@ class Human : public Player {
      * @post move.row and move.col contain valid zero-based indices.
      */
     void set_coords(
-        Move& move,                  //
-        const GameBoard* game_board, //
-        Console& console             //
+        Move& move,             //
+        const GameBoard* board, //
+        Console& console        //
     ) const {
-        char row_start = game_board->get_row_start_label();
-        char row_end = char(row_start + game_board->get_size() - 1);
-        int col_start = game_board->get_col_start_label();
-        int col_end = col_start + game_board->get_size() - 1;
+        char row_start = board->get_row_start_label();
+        char row_end = char(row_start + board->get_size() - 1);
+        int col_start = board->get_col_start_label();
+        int col_end = col_start + board->get_size() - 1;
 
         string range = parenthesis(str(row_start) + to_string(col_start)) + " to " + //
                        parenthesis(str(row_end) + to_string(col_end));
@@ -641,20 +641,20 @@ class Human : public Player {
 
             row_input = to_lower(row_input);
 
-            if (!game_board->check_row_bounds(row_input)) {
+            if (!board->check_row_bounds(row_input)) {
                 prompt.text[0] = invalid_row;
                 continue;
             }
-            if (!game_board->check_column_bounds(col_input)) {
+            if (!board->check_column_bounds(col_input)) {
                 prompt.text[0] = invalid_col;
                 continue;
             }
 
-            row = game_board->row(row_input);
-            col = game_board->col(col_input);
+            row = board->row(row_input);
+            col = board->col(col_input);
 
-            if (!game_board->is_empty(row, col)) {
-                Cell cell = game_board->at(row, col);
+            if (!board->is_empty(row, col)) {
+                Cell cell = board->at(row, col);
                 prompt.text[0] = coords(str(row_input), to_string(col_input)) +
                                  " is already taken by " + str(cell) +
                                  ". Please enter an empty coordinate";
@@ -707,16 +707,14 @@ class Human : public Player {
 
 class BoardEngine {
   public:
+    const GameBoard* board;
+
     BoardEngine() : board(nullptr) {}
 
     BoardEngine(const GameBoard* board) : board(board) {}
 
     bool is_board_set() const {
         return board != nullptr;
-    }
-
-    void set_board(const GameBoard* b) {
-        board = b;
     }
 
     vector<Move> get_valid_moves() const {
@@ -734,9 +732,6 @@ class BoardEngine {
         }
         return available_moves;
     }
-
-  private:
-    const GameBoard* board;
 };
 
 /**
@@ -758,9 +753,9 @@ class Computer : public Player {
      */
     Computer(PlayerType type) : Player(type), engine() {}
 
-    Move get_move(const GameBoard* game_board, Console& console) override {
-        if (!engine.is_board_set()) {
-            engine.set_board(game_board);
+    Move get_move(const GameBoard* board, Console& console) override {
+        if (engine.board == nullptr) {
+            engine.board = board;
         }
         console.push(Block({"", "Computer is thinking..."}));
         sleep(1);
@@ -773,8 +768,8 @@ class Computer : public Player {
   protected:
     BoardEngine engine;
 
-    void display_move(const Move& move, const GameBoard* game_board, Console& console) {
-        console.push(Block({"", "Computer played " + str(move, game_board)}));
+    void display_move(const Move& move, Console& console) {
+        console.push(Block({"", "Computer played " + str(move, engine.board)}));
         sleep(2);
         console.pop();
     }
@@ -784,14 +779,14 @@ class RandomComputer : public Computer {
   public:
     RandomComputer(PlayerType type) : Computer(type) {}
 
-    Move get_move(const GameBoard* game_board, Console& console) override {
-        Computer::get_move(game_board, console);
+    Move get_move(const GameBoard* board, Console& console) override {
+        Computer::get_move(board, console);
         vector<Move> valid_moves = engine.get_valid_moves();
 
         int num_moves = valid_moves.size();
         int choice = rand() % num_moves;
 
-        display_move(valid_moves[choice], game_board, console);
+        display_move(valid_moves[choice], console);
         return valid_moves[choice];
     }
 };
@@ -800,7 +795,7 @@ class SmartComputer : public Computer {
   public:
     SmartComputer(PlayerType type) : Computer(type) {}
 
-    Move get_move(const GameBoard* game_board, Console& console) override {
+    Move get_move(const GameBoard* board, Console& console) override {
         return Move(0, 0, X);
     }
 };
@@ -816,11 +811,11 @@ class Game {
      * @post Game object is ready for initialization via play/start.
      */
     Game()
-        : game_board(nullptr),   //
-          player1(nullptr),      //
-          player2(nullptr),      //
-          console(),             //
-          console_game_board(0), //
+        : board(nullptr),   //
+          player1(nullptr), //
+          player2(nullptr), //
+          console(),        //
+          console_board(0), //
           winner(nullptr) {}
 
     void play() {
@@ -837,18 +832,18 @@ class Game {
     }
 
     ~Game() {
-        delete game_board;
+        delete board;
         delete player1;
         delete player2;
     }
 
   private:
-    GameBoard* game_board;
+    GameBoard* board;
     Player* player1;
     Player* player2;
     Computer* computer;
     Console console;
-    size_t console_game_board;
+    size_t console_board;
     Player* winner;
 
     /**
@@ -883,10 +878,10 @@ class Game {
      * @post A move is requested from player.
      */
     bool turn(Player* player) {
-        Move move = player->get_move(game_board, console);
-        game_board->place(move);
-        console.overwrite(console_game_board, game_board);
-        if (game_board->is_game_over()) {
+        Move move = player->get_move(board, console);
+        board->place(move);
+        console.overwrite(console_board, board);
+        if (board->is_game_over()) {
             return true;
         }
         return false;
@@ -985,7 +980,7 @@ class Game {
             }
             break;
         }
-        game_board = new GameBoard(size);
+        board = new GameBoard(size);
     }
 
     Computer* set_computer_difficulty(const PlayerType type) {
@@ -1045,8 +1040,8 @@ class Game {
     }
 
     void setup_console() {
-        console.push(Block(game_board));
-        console_game_board = console.size() - 1;
+        console.push(Block(board));
+        console_board = console.size() - 1;
         console.push({""});
     }
 };

@@ -499,7 +499,7 @@ Block::Block(const GameBoard* board) {
     add_line("    ");
 
     for (int i = 0; i < size; ++i) {
-        append(aligned(str(col_label + i), width));
+        append(aligned(to_string(col_label + i), width));
     }
 
     add_line(row_separator);
@@ -632,7 +632,7 @@ class Human : public Player {
             }
 
             string invalid_row = quote(str(row_input)) + " is not a valid row. ";
-            string invalid_col = quote(str(col_input)) + " is not a valid column. ";
+            string invalid_col = quote(to_string(col_input)) + " is not a valid column. ";
 
             if (!(is_alpha(row_input))) {
                 prompt.text[0] = invalid_row;
@@ -655,8 +655,9 @@ class Human : public Player {
 
             if (!game_board->is_empty(row, col)) {
                 Cell cell = game_board->at(row, col);
-                prompt.text[0] = coords(str(row_input), str(col_input)) + " is already taken by " +
-                                 str(cell) + ". Please enter an empty coordinate";
+                prompt.text[0] = coords(str(row_input), to_string(col_input)) +
+                                 " is already taken by " + str(cell) +
+                                 ". Please enter an empty coordinate";
                 continue;
             }
             break;
@@ -761,7 +762,7 @@ class Computer : public Player {
         if (!engine.is_board_set()) {
             engine.set_board(game_board);
         }
-        console.push(Block({"Computer is thinking..."}));
+        console.push(Block({"", "Computer is thinking..."}));
         sleep(1);
         console.pop();
         return Move(0, 0, X);
@@ -773,8 +774,8 @@ class Computer : public Player {
     BoardEngine engine;
 
     void display_move(const Move& move, const GameBoard* game_board, Console& console) {
-        console.push(Block({"Computer plays " + str(move, game_board)}));
-        sleep(1);
+        console.push(Block({"", "Computer played " + str(move, game_board)}));
+        sleep(2);
         console.pop();
     }
 };
@@ -979,7 +980,7 @@ class Game {
             }
 
             if (!(size >= 6 && size <= 9)) {
-                prompt.text[0] = quote(str(size)) + " is not a valid board size.";
+                prompt.text[0] = quote(to_string(size)) + " is not a valid board size.";
                 continue;
             }
             break;
@@ -1003,7 +1004,7 @@ class Game {
             }
 
             if (!(choice == 1 || choice == 2)) {
-                prompt.text[0] = quote(str(choice)) + " is not a valid choice.";
+                prompt.text[0] = quote(to_string(choice)) + " is not a valid choice.";
                 continue;
             }
             break;

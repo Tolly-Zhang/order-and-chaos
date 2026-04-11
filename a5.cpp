@@ -67,12 +67,16 @@ bool is_alpha(char c) {
     return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
 }
 
-string to_string(char c) {
+string str(char c) {
     return string(1, c);
 }
 
 string quote(const string& str) {
     return "\"" + str + "\"";
+}
+
+string parenthesis(const string& str) {
+    return "(" + str + ")";
 }
 
 string coords(const string& row, const string& col) {
@@ -88,7 +92,7 @@ enum Cell {
     X  ///< Cell occupied by player X
 };
 
-string to_string(Cell c) {
+string str(Cell c) {
     switch (c) {
     case E:
         return ".";
@@ -105,7 +109,7 @@ string to_string(Cell c) {
  */
 enum PlayerType { ORDER, CHAOS };
 
-string to_string(PlayerType type) {
+string str(PlayerType type) {
     switch (type) {
     case ORDER:
         return "Order";
@@ -210,9 +214,13 @@ class Console {
         refresh();
     }
 
-    stringstream ask(const string& prompt) {
+    stringstream ask(Block prompt) {
         clear_input_buffer();
-        push(Block({"| " + prompt + "> "}));
+        if (!prompt.text.empty()) {
+            prompt.text.back() = "| " + prompt.text.back() + "> ";
+        }
+
+        push(prompt);
 
         string input;
         getline(cin, input);
@@ -455,10 +463,10 @@ class GameBoard {
     }
 };
 
-string to_string(const Move& move, const GameBoard* board) {
-    return to_string(move.symbol) + " at " +
+string str(const Move& move, const GameBoard* board) {
+    return str(move.symbol) + " at " +
            coords(
-               to_string(char(move.row + board->get_row_start_label())),
+               str(char(move.row + board->get_row_start_label())),
                to_string(move.col + board->get_col_start_label())
            );
 }
@@ -491,17 +499,17 @@ Block::Block(const GameBoard* board) {
     add_line("    ");
 
     for (int i = 0; i < size; ++i) {
-        append(aligned(to_string(col_label + i), width));
+        append(aligned(str(col_label + i), width));
     }
 
     add_line(row_separator);
 
     for (size_t r = 0; r < size; ++r) {
         add_line();
-        append(aligned(to_string(char(row_label + r)), width));
+        append(aligned(str(char(row_label + r)), width));
         for (size_t c = 0; c < size; ++c) {
             append(" |");
-            append(aligned(to_string(board->at(r, c)), width - 2));
+            append(aligned(str(board->at(r, c)), width - 2));
         }
         append(" |");
         add_line(row_separator);
@@ -606,42 +614,39 @@ class Human : public Player {
         int col_start = game_board->get_col_start_label();
         int col_end = col_start + game_board->get_size() - 1;
 
-        string row_range = to_string(row_start) + " to " + to_string(row_end);
-        string col_range = to_string(col_start) + " to " + to_string(col_end);
+        string range = parenthesis(str(row_start) + to_string(col_start)) + " to " + //
+                       parenthesis(str(row_end) + to_string(col_end));
 
         char row_input;
         int col_input;
         size_t row;
         size_t col;
-        const string question = "Please enter a row from " + row_range + //
-                                " and a column from " + col_range;
-        string prompt = question;
+
+        Block prompt({"", "Please enter a row from " + range});
         while (true) {
             stringstream input = console.ask(prompt);
             input >> row_input >> col_input;
             if (input.fail()) {
-                prompt = quote(input.str()) + " is not a valid coordinate. " + question;
+                prompt.text[0] = "Invalid input. ";
                 continue;
             }
 
-            string prompt_invalid_row =
-                quote(to_string(row_input)) + " is not a valid row. " + question;
-            string prompt_invalid_col =
-                quote(to_string(col_input)) + " is not a valid column. " + question;
+            string invalid_row = quote(str(row_input)) + " is not a valid row. ";
+            string invalid_col = quote(str(col_input)) + " is not a valid column. ";
 
             if (!(is_alpha(row_input))) {
-                prompt = prompt_invalid_row;
+                prompt.text[0] = invalid_row;
                 continue;
             }
 
             row_input = to_lower(row_input);
 
             if (!game_board->check_row_bounds(row_input)) {
-                prompt = prompt_invalid_row;
+                prompt.text[0] = invalid_row;
                 continue;
             }
             if (!game_board->check_column_bounds(col_input)) {
-                prompt = prompt_invalid_col;
+                prompt.text[0] = invalid_col;
                 continue;
             }
 
@@ -650,9 +655,8 @@ class Human : public Player {
 
             if (!game_board->is_empty(row, col)) {
                 Cell cell = game_board->at(row, col);
-                prompt = coords(to_string(row_input), to_string(col_input)) +
-                         " is already taken by " + to_string(cell) +
-                         ". Please enter an empty coordinate";
+                prompt.text[0] = coords(str(row_input), str(col_input)) + " is already taken by " +
+                                 str(cell) + ". Please enter an empty coordinate";
                 continue;
             }
             break;
@@ -675,24 +679,22 @@ class Human : public Player {
     ) const {
         char c;
         Cell cell;
-        const string question = "Please enter a symbol (x or o)";
-        string prompt = question;
+        Block prompt({"", "Please enter a symbol (x) or (o)"});
         while (true) {
             stringstream input = console.ask(prompt);
             input >> c;
 
-            string prompt_invalid_symbol =
-                quote(input.str()) + " is not a valid symbol. " + question;
+            string invalid = "Invalid input. ";
 
             if (input.fail()) {
-                prompt = prompt_invalid_symbol;
+                prompt.text[0] = invalid;
                 continue;
             }
 
             c = to_lower(c);
 
             if (!(c == 'o' || c == 'x')) {
-                prompt = prompt_invalid_symbol;
+                prompt.text[0] = invalid;
                 continue;
             }
             break;
@@ -771,7 +773,7 @@ class Computer : public Player {
     BoardEngine engine;
 
     void display_move(const Move& move, const GameBoard* game_board, Console& console) {
-        console.push(Block({"Computer plays " + to_string(move, game_board)}));
+        console.push(Block({"Computer plays " + str(move, game_board)}));
         sleep(1);
         console.pop();
     }
@@ -826,7 +828,7 @@ class Game {
         while (true) {
             setup_game();
             cycle_turns();
-            confirm({"Game over! " + to_string(winner->get_type()) + " wins!"});
+            confirm({"Game over! " + str(winner->get_type()) + " wins!"});
             if (!end()) {
                 break;
             }
@@ -895,20 +897,21 @@ class Game {
      * @post Return value controls whether play() repeats.
      */
     bool end() {
-        string prompt = "Play again? (y/n)";
+        Block prompt({"", "Play again? (y) or (n)"});
         string input;
         while (true) {
             stringstream ss = console.ask(prompt);
             ss >> input;
 
             if (ss.fail()) {
-                prompt = quote(input) + " is not a valid choice. " + prompt;
+                prompt.text[0] = "Invalid input.";
                 continue;
             }
 
             input = to_lower(input[0]);
+
             if (!(input == "y" || input == "n")) {
-                prompt = quote(input) + " is not a valid choice. " + prompt;
+                prompt.text[0] = quote(input) + " is not a valid choice. ";
                 continue;
             }
             break;
@@ -927,7 +930,7 @@ class Game {
     }
 
     void wait_for_enter() {
-        console.ask("Press Enter to continue");
+        console.ask(Block({"Press Enter to continue"}));
     }
 
     void title() {
@@ -963,7 +966,7 @@ class Game {
      * @post game_board is set to a size between 6 and 9.
      */
     void setup_board() {
-        string prompt = "Enter a board size from 6 to 9";
+        Block prompt({"", "Enter a board size from (6) to (9)"});
         int size;
         while (true) {
             stringstream input = console.ask(prompt);
@@ -971,14 +974,12 @@ class Game {
             input >> size;
 
             if (input.fail()) {
-                prompt =
-                    quote(input.str()) + " is not an integer. Please enter an integer from 6 to 9";
+                prompt.text[0] = "Invalid input.";
                 continue;
             }
 
             if (!(size >= 6 && size <= 9)) {
-                prompt = quote(to_string(size)) +
-                         " is not a valid board size. Please enter one from 6 to 9";
+                prompt.text[0] = quote(str(size)) + " is not a valid board size.";
                 continue;
             }
             break;
@@ -989,7 +990,7 @@ class Game {
     Computer* set_computer_difficulty(const PlayerType type) {
         Computer* computer = nullptr;
 
-        string prompt = "Choose computer difficulty: (1) Random, (2) Smart";
+        Block prompt({"", "Please choose difficulty: (1) Random, (2) Smart"});
         int choice;
         while (true) {
             stringstream input = console.ask(prompt);
@@ -997,14 +998,12 @@ class Game {
             input >> choice;
 
             if (input.fail()) {
-                prompt = quote(input.str()) +
-                         " is not an integer. Please enter 1 for Random or 2 for Smart";
+                prompt.text[0] = "Invalid input.";
                 continue;
             }
 
             if (!(choice == 1 || choice == 2)) {
-                prompt = quote(to_string(choice)) +
-                         " is not a valid choice. Please enter 1 for Random or 2 for Smart";
+                prompt.text[0] = quote(str(choice)) + " is not a valid choice.";
                 continue;
             }
             break;
@@ -1038,8 +1037,8 @@ class Game {
 
         string first = num == 0 ? "You" : "The computer";
         confirm(
-            {"You are playing as " + to_string(p2_type) + ". The computer is playing as " +
-                 to_string(p1_type) + ".",
+            {"You are playing as " + str(p2_type) + ". The computer is playing as " + str(p1_type) +
+                 ".",
              first + " will go first."}
         );
     }

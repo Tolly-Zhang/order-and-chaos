@@ -3,7 +3,7 @@ Assignment 5 Report
 
 Description of Computers Playing Strategy
 -----------------------------------------
-Both computer are built upon an BoardEngine class that has methods that return possible moves and evaluates the current board state for how "winnable" it is for Order. It does this by scanning every possible 5-in a row and seeing how filled in they are and sums up weights to generate an integer score.
+Both computers are built upon an BoardEngine class that has methods that return possible moves and evaluates the current board state for how "winnable" it is for Order. It does this by scanning every possible 5-in a row and seeing how filled in they are and sums up weights to generate an integer score.
 
 RandomComputer
 - This computer plays random moves from a vector of available moves on the board. This bot is good if you want to debug.

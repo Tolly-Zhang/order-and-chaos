@@ -32,6 +32,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <unistd.h>
@@ -83,16 +84,37 @@ string parenthesis(const string& str) {
 string coords(const string& row, const string& col) {
     return "(" + row + ", " + col + ")";
 }
+
+string blue(const string& str) {
+    return "\033[34m" + str + "\033[0m";
+}
+
+string green(const string& str) {
+    return "\033[32m" + str + "\033[0m";
+}
+
 enum Cell { E, O, X };
 
 string str(Cell c) {
     switch (c) {
     case E:
-        return ".";
+        return " ";
     case O:
         return "O";
     case X:
         return "X";
+    }
+    return "";
+}
+
+string color(Cell c) {
+    switch (c) {
+    case E:
+        return " ";
+    case O:
+        return blue(str(c));
+    case X:
+        return green(str(c));
     }
     return "";
 }
@@ -119,6 +141,12 @@ struct Move {
         : row(r), //
           col(c), //
           symbol(s) {}
+};
+
+struct MoveScore {
+    Move move;
+    double score;
+    MoveScore(const Move& move, const double score) : move(move), score(score) {}
 };
 
 struct Block {
@@ -295,16 +323,21 @@ class GameBoard {
         return board[row][column];
     }
 
-    void place(const Move& move, Console& console, const PlayerType type, bool display = true) {
+    void place(const Move& move, Console& console, const PlayerType type) {
         size_t r = move.row;
         size_t c = move.col;
 
         board[r][c] = move.symbol;
-        if (display) {
-            string message =
-                str(type) + " played " + str(move.symbol) + " at " + coords(r_label(r), c_label(c));
-            console.display(Block({"", message}), 2);
-        }
+
+        string message =
+            str(type) + " played " + str(move.symbol) + " at " + coords(r_label(r), c_label(c));
+        console.display(Block({"", message}), 2);
+
+        game_over = check_win(move);
+    }
+
+    void place(const Move& move) {
+        board[move.row][move.col] = move.symbol;
         game_over = check_win(move);
     }
 
@@ -425,7 +458,13 @@ Block::Block(const GameBoard* board) {
         append(aligned(str(char(row_label + r)), width));
         for (size_t c = 0; c < size; ++c) {
             append(" |");
-            append(aligned(str(board->at(r, c)), width - 2));
+            string plain = str(board->at(r, c));
+            string padded = aligned(plain, width - 2);
+            string colored = color(board->at(r, c));
+            if (plain.size() > 0) {
+                padded = padded.substr(0, padded.size() - plain.size()) + colored;
+            }
+            append(padded);
         }
         append(" |");
         add_line(row_separator);
@@ -579,134 +618,209 @@ class Human : public Player {
         move.symbol = cell;
     }
 };
+
+class Engine {
+  public:
+    Engine() = delete;
+
+    static vector<Move> get_valid_moves(const GameBoard* board) {
+        vector<Move> available_moves = {};
+        int size = board->get_size();
+
+        for (size_t r = 0; r < size; r++) {
+            for (size_t c = 0; c < size; c++) {
+                Cell symbol = board->at(r, c);
+                if (symbol == E) {
+                    available_moves.push_back(Move(r, c, X));
+                    available_moves.push_back(Move(r, c, O));
+                }
+            }
+        }
+        return available_moves;
+    }
+
+    static vector<MoveScore> evaluate_move_scores(
+        const GameBoard* board, const PlayerType current_player, const int max_depth
+    ) {
+        vector<MoveScore> move_scores;
+        vector<Move> moves = get_valid_moves(board);
+        const double neg_inf = -numeric_limits<double>::infinity();
+        const double pos_inf = numeric_limits<double>::infinity();
+
+        for (const Move& move : moves) {
+            GameBoard next_board = *board;
+            next_board.place(move);
+
+            PlayerType next_player = current_player == ORDER ? CHAOS : ORDER;
+            double score = evaluate(&next_board, next_player, neg_inf, pos_inf, 1, max_depth);
+            move_scores.push_back(MoveScore(move, score));
+        }
+        sort(move_scores);
+        return move_scores;
+    }
+
+    static void sort(vector<MoveScore>& move_scores) {
+        std::sort(
+            move_scores.begin(), move_scores.end(), [](const MoveScore& a, const MoveScore& b) {
+                return a.score > b.score;
+            }
+        );
+    }
+
+    static double evaluate(
+        const GameBoard* board,
+        PlayerType player,
+        double alpha,
+        double beta,
+        const int depth,
+        const int max_depth
+    ) {
+        if (board->order_won()) {
+            return 1000000000.0 - depth;
+        }
+
+        if (board->is_full()) {
+            return -1000000000.0 + depth;
+        }
+
+        if (depth >= max_depth) {
+            return evaluate_board(board);
+        }
+
+        vector<Move> moves = get_valid_moves(board);
+
+        if (player == ORDER) {
+            double best = -numeric_limits<double>::infinity();
+
+            for (const Move& move : moves) {
+                GameBoard next_board = *board;
+                next_board.place(move);
+
+                double score = evaluate(&next_board, CHAOS, alpha, beta, depth + 1, max_depth);
+                best = max(best, score);
+                alpha = max(alpha, best);
+
+                if (beta <= alpha) {
+                    break;
+                }
+            }
+            return best;
+        }
+
+        double best = numeric_limits<double>::infinity();
+
+        for (const Move& move : moves) {
+            GameBoard next_board = *board;
+            next_board.place(move);
+
+            double score = evaluate(&next_board, ORDER, alpha, beta, depth + 1, max_depth);
+            best = min(best, score);
+            beta = min(beta, best);
+
+            if (beta <= alpha) {
+                break;
+            }
+        }
+        return best;
+    }
+
+  private:
+    static double evaluate_board(const GameBoard* board) {
+        return evaluate_symbol(board, X) + evaluate_symbol(board, O);
+    }
+
+    static int evaluate_symbol(const GameBoard* board, Cell symbol) {
+        int size = board->get_size();
+        vector<vector<vector<int>>> bounds = {
+            {{0, size - 1}, {0, size - 5}, {0, 1}},
+            {{0, size - 5}, {0, size - 1}, {1, 0}},
+            {{0, size - 5}, {0, size - 5}, {1, 1}},
+            {{0, size - 5}, {4, size - 1}, {1, -1}}
+        };
+
+        int score = 0;
+        for (vector<vector<int>> bound : bounds) {
+            score += evaluate_direction(
+                board,
+                symbol,
+                bound[0][0], // r_start
+                bound[0][1], // r_end
+                bound[1][0], // c_start
+                bound[1][1], // c_end
+                bound[2][0], // dr
+                bound[2][1]  // dc
+            );
+        }
+        return score;
+    }
+
+    static int evaluate_direction(
+        const GameBoard* board,
+        Cell symbol,
+        int r_start,
+        int r_end,
+        int c_start,
+        int c_end,
+        int dr,
+        int dc
+    ) {
+        int score = 0;
+        for (int r = r_start; r <= r_end; ++r) {
+            for (int c = c_start; c <= c_end; ++c) {
+                score += connected_score(board, symbol, r, c, dr, dc);
+            }
+        }
+        return score;
+    }
+
+    static int connected_score(
+        const GameBoard* board_state, //
+        const Cell target,            //
+        int r,                        //
+        int c,                        //
+        const int dr,                 //
+        const int dc
+    ) {
+        Cell opposite = target == X ? O : X;
+        int target_count = 0;
+        int opposite_count = 0;
+
+        for (int i = 0; i < 5; ++i) {
+            Cell current = board_state->at(r, c);
+            if (current == target) {
+                ++target_count;
+            } else if (current == opposite) {
+                ++opposite_count;
+            }
+            r += dr;
+            c += dc;
+        }
+
+        if (target_count > 0 && opposite_count > 0) {
+            return 0;
+        }
+
+        vector<int> scores = {0, 1, 10, 100, 10000, 1000000};
+        if (target_count >= 0 && target_count <= scores.size() - 1) {
+            return scores[target_count];
+        }
+        return 0;
+    }
+};
+
 class Computer : public Player {
   public:
     Computer() = delete;
 
-    Computer(PlayerType type) : Player(type, "the computer"), engine() {}
+    Computer(PlayerType type) : Player(type, "the computer") {}
 
     Move determine_move(const GameBoard* board, Console& console) override {
-        engine.set_board(board);
+        (void)board;
         console.display(Block({"", "Computer is thinking..."}), 1);
         return Move(0, 0, X);
     }
 
     ~Computer() {}
-
-  protected:
-    class BoardEngine {
-      public:
-        const GameBoard* board;
-
-        BoardEngine() : board(nullptr) {}
-
-        BoardEngine(const GameBoard* board) : board(board) {}
-
-        void set_board(const GameBoard* b) {
-            board = b;
-        }
-
-        vector<Move> get_valid_moves() const {
-            vector<Move> available_moves = {};
-            int size = board->get_size();
-
-            for (size_t r = 0; r < size; r++) {
-                for (size_t c = 0; c < size; c++) {
-                    Cell symbol = board->at(r, c);
-                    if (symbol == E) {
-                        available_moves.push_back(Move(r, c, X));
-                        available_moves.push_back(Move(r, c, O));
-                    }
-                }
-            }
-            return available_moves;
-        }
-
-        int evaluate(const GameBoard* board) const {
-            return evaluate_symbol(board, X) + evaluate_symbol(board, O);
-        }
-
-      private:
-        int evaluate_symbol(const GameBoard* board, Cell symbol) const {
-            int size = board->get_size();
-            vector<vector<vector<int>>> bounds = {
-                {{0, size - 1}, {0, size - 5}, {0, 1}},
-                {{0, size - 5}, {0, size - 1}, {1, 0}},
-                {{0, size - 5}, {0, size - 5}, {1, 1}},
-                {{0, size - 5}, {4, size - 1}, {1, -1}}
-            };
-
-            int score = 0;
-            for (vector<vector<int>> bound : bounds) {
-                score += evaluate_direction(
-                    board,
-                    symbol,
-                    bound[0][0], // r_start
-                    bound[0][1], // r_end
-                    bound[1][0], // c_start
-                    bound[1][1], // c_end
-                    bound[2][0], // dr
-                    bound[2][1]  // dc
-                );
-            }
-            return score;
-        }
-
-        int evaluate_direction(
-            const GameBoard* board,
-            Cell symbol,
-            int r_start,
-            int r_end,
-            int c_start,
-            int c_end,
-            int dr,
-            int dc
-        ) const {
-            int score = 0;
-            for (int r = r_start; r <= r_end; ++r) {
-                for (int c = c_start; c <= c_end; ++c) {
-                    score += connected_score(board, symbol, r, c, dr, dc);
-                }
-            }
-            return score;
-        }
-
-        int connected_score(
-            const GameBoard* board_state, //
-            const Cell target,            //
-            int r,                        //
-            int c,                        //
-            const int dr,                 //
-            const int dc
-        ) const {
-            Cell opposite = target == X ? O : X;
-            int target_count = 0;
-            int opposite_count = 0;
-
-            for (int i = 0; i < 5; ++i) {
-                Cell current = board_state->at(r, c);
-                if (current == target) {
-                    ++target_count;
-                } else if (current == opposite) {
-                    ++opposite_count;
-                }
-                r += dr;
-                c += dc;
-            }
-
-            if (target_count > 0 && opposite_count > 0) {
-                return 0;
-            }
-
-            vector<int> scores = {0, 1, 10, 100, 10000, 1000000};
-            if (target_count >= 0 && target_count <= scores.size() - 1) {
-                return scores[target_count];
-            }
-            return 0;
-        }
-    };
-
-    BoardEngine engine;
 };
 
 class RandomComputer : public Computer {
@@ -715,12 +829,11 @@ class RandomComputer : public Computer {
 
     Move determine_move(const GameBoard* board, Console& console) override {
         Computer::determine_move(board, console);
-        vector<Move> moves = engine.get_valid_moves();
+        vector<Move> moves = Engine::get_valid_moves(board);
 
         int num_moves = moves.size();
         int choice = rand() % num_moves;
         Move move = moves[choice];
-        move.symbol = (rand() % 2 == 0) ? X : O;
 
         return move;
     }
@@ -732,46 +845,16 @@ class SmartComputer : public Computer {
 
     Move determine_move(const GameBoard* board, Console& console) override {
         Computer::determine_move(board, console);
-        Move move(0, 0, X);
+        vector<MoveScore> move_scores = Engine::evaluate_move_scores(board, type, DEPTH);
         if (type == ORDER) {
-            move = maximize_score(console);
+            return move_scores[0].move;
         } else {
-            move = minimize_score(console);
+            return move_scores.back().move;
         }
-        return move;
     }
 
   private:
-    Move maximize_score(Console& console) {
-        vector<Move> moves = engine.get_valid_moves();
-        int best_score = -1;
-        Move best_move(0, 0, X);
-        for (Move move : moves) {
-            GameBoard board_copy = *engine.board;
-            board_copy.place(move, console, type, false);
-            int score = engine.evaluate(&board_copy);
-            if (score > best_score) {
-                best_score = score;
-                best_move = move;
-            }
-        }
-        return best_move;
-    }
-    Move minimize_score(Console& console) {
-        vector<Move> moves = engine.get_valid_moves();
-        int worst_score = 1000000000;
-        Move worst_move(0, 0, X);
-        for (Move move : moves) {
-            GameBoard board_copy = *engine.board;
-            board_copy.place(move, console, type, false);
-            int score = engine.evaluate(&board_copy);
-            if (score < worst_score) {
-                worst_score = score;
-                worst_move = move;
-            }
-        }
-        return worst_move;
-    }
+    const int DEPTH = 2;
 };
 class Game {
   public:

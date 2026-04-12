@@ -3,28 +3,68 @@ Assignment 5 Report
 
 Description of Computers Playing Strategy
 -----------------------------------------
+Both computer are built upon an BoardEngine class that has methods that return possible moves and evaluates the current board state for how "winnable" it is for Order. It does this by scanning every possible 5-in a row and seeing how filled in they are and sums up weights to generate an integer score.
 
-(Describe the strategy your computer player uses. Include a discussion of how
-well it plays, if there are any known weaknesses, and any other relevant
-information.)
+RandomComputer
+- This computer plays random moves from a vector of available moves on the board. This bot is good if you want to debug.
+
+SmartComputer
+- This computer simulates all possible moves and uses the engine to evaluate all the future possible boards to determine the move that creates the most favorable position.
+
 
 
 Extra Features
 --------------
+1. Console Class
+- This is a custom-built class that handles all I/O for the user, It stores a stack of string blocks for all content displayed on screen and updates them by erasing then reprinting everything using ASCII escape codes. 
+- It allows complex UI structures and efficient handling combined with stringstream.
+- It was probably the most challenging aspect of this project and took several versions to get right reliably.
+- It allows the code to print, remove, overwrite, and take in user input all together all within itself.
 
-(Describe all extra features your program has that were not required by the
-assignment; if there are no extra features, then say that.)
+2. GameBoard Class
+- Stores a 2d vector matrix of Cells that represent the current game state.
+- It handles move placement and win checking efficiently in O(1) time
+- Checks whether the last move made by players was a winning move.
+
+3. Game Class
+- Handles game setup
+- Handles game end
+- Handles turn cycling
+
+Class Hierarchy:
+
+4. Player Class
+    5. Human Class
+    - Handles user input within itself
+
+    6. Computer Class
+        7. Smart Computer
+            - Refer to Playing strategy
+
+        8. Random Computer
+            - Refer to Playing strategy
 
 
 Known Bugs and Limitations
 --------------------------
-
-(If your program is perfect and unlimited, then say so!)
-
+- Please ensure the terminal window is tall enough to show the entire game. The Console class should theoretically handle window cutoffs without issue but there may still be unknown bugs.
+- Only type input when prompted and don't spam characters when text is being displayed. All prompts start with a "| " and end with a ">". The code attempts to clean out stream buffers but it is not completely reliable yet.
+- Extra trailing input is disregarded by design, so input such as "a4someextratext" will still be parsed as "a4".
 
 Acknowledgements of All Help
 ----------------------------
+- You can view this project's GitHub at https://github.com/Tolly-Zhang/order-and-chaos which shows the entire commit history. Most edits were made on one machine while collaborating using VS Code Live Share.
+- The project utilizes clang-format, a C++ linter, any extra trailing //s are used to aid in its formatting.
 
-(Cite all websites, books, people, etc. that you got help from, including what
-sort of help you got. Each citation should be about 1 to 2 lines long.)
+SOURCES
+1. https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 for ASCII escape codes.
+2. https://en.cppreference.com/w/cpp/io/manip/flush.html for cout << flush.
+3. https://www.w3schools.com/cpp/cpp_enum.asp for enums.
+4. https://en.cppreference.com/w/cpp/types/size_t.html for appropriate size_t usage.
+5. https://www.geeksforgeeks.org/cpp/stringstream-c-applications/ for stringstream usage.
+6. https://www.w3schools.com/cpp/ref_keyword_protected.asp for protected members in classes
+7. https://cplusplus.com/reference/streambuf/streambuf/in_avail/ for stream buffer clearing 
+7. https://en.cppreference.com/w/cpp/language/lambda.html for lamdas
+8. https://pubs.opengroup.org/onlinepubs/009696799/functions/sleep.html for sleep()
+9. https://en.cppreference.com/w/cpp/language/function.html#Deleted_functions for deleted functions
 

@@ -5,9 +5,9 @@
 // Student Info
 // ------------
 //
-// Name : <put your full name here!>
-// St.# : <put your full SFU student number here>
-// Email: <put your SFU email address here>
+// Name : Tolly Zhang
+// St.# : 301662413
+// Email: tza115@sfu.ca
 //
 //
 // Statement of Originality
@@ -30,10 +30,7 @@
 // We want to see your own work.
 //
 #include <algorithm>
-#include <array>
-#include <cassert>
 #include <cstdlib>
-#include <ctime>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -48,19 +45,23 @@ class Player;
 class Human;
 class Computer;
 class Game;
-
-/**
- * @brief Converts an uppercase ASCII letter to lowercase.
- * @param c Character to convert.
- * @return Lowercase version of c when c is between 'A' and 'Z'; otherwise c.
- * @pre c is any valid char value.
- * @post Return value is unchanged for non-uppercase ASCII input.
- */
 char to_lower(char c) {
     if ('A' <= c && c <= 'Z') {
         return c + 32;
     }
     return c;
+}
+
+char to_upper(char c) {
+    if ('a' <= c && c <= 'z') {
+        return c - 32;
+    }
+    return c;
+}
+
+string capitalize(string str) {
+    str[0] = to_upper(str[0]);
+    return str;
 }
 
 bool is_alpha(char c) {
@@ -82,15 +83,7 @@ string parenthesis(const string& str) {
 string coords(const string& row, const string& col) {
     return "(" + row + ", " + col + ")";
 }
-
-/**
- * @brief Represents the state of a cell on the game board.
- */
-enum Cell {
-    E, ///< Empty cell
-    O, ///< Cell occupied by player O
-    X  ///< Cell occupied by player X
-};
+enum Cell { E, O, X };
 
 string str(Cell c) {
     switch (c) {
@@ -104,9 +97,6 @@ string str(Cell c) {
     return "";
 }
 
-/**
- * @brief Represents the role a player has in the game.
- */
 enum PlayerType { ORDER, CHAOS };
 
 string str(PlayerType type) {
@@ -119,35 +109,18 @@ string str(PlayerType type) {
     return "";
 }
 
-/**
- * @brief Represents a move made by a player, including the row, column, and symbol
- * placed.
- */
+enum ComputerDifficulty { RANDOM, SMART };
 struct Move {
     size_t row;
     size_t col;
     Cell symbol;
 
-    /**
-     * @brief Constructs a Move with the given row, column, and symbol.
-     * @param r The row index of the move.
-     * @param c The column index of the move.
-     * @param s The symbol to place (O or X).
-     * @pre r and c are valid zero-based board indices in the caller's context.
-     * @pre s is either O or X.
-     * @post row == r, col == c, and symbol == s.
-     */
     Move(int r, int c, Cell s)
         : row(r), //
           col(c), //
-          symbol(s) {
-        assert(s == O || s == X);
-    }
+          symbol(s) {}
 };
 
-/**
- * @brief Console text block with a cached line count for redraw logic.
- */
 struct Block {
     vector<string> text;
 
@@ -171,23 +144,14 @@ struct Block {
 };
 class Console {
   public:
-    /**
-     * @brief Creates an empty renderer state.
-     * @post No blocks are stored and lines == 0.
-     */
     Console() {
-        cout << "\033[?1049h" << flush;
+        cout << open_terminal << flush;
     }
 
     size_t size() const {
         return blocks.size();
     }
-    /**
-     * @brief Adds a block to the render stack and redraws.
-     * @param block Block to append.
-     * @pre block.lines >= 1.
-     * @post block is the newest rendered block.
-     */
+
     void push(const Block& block) {
         blocks.push_back(block);
         refresh();
@@ -230,28 +194,30 @@ class Console {
         return ss;
     }
 
+    void display(const Block& block, const int duration_s) {
+        push(block);
+        sleep(duration_s);
+        pop();
+    }
+
     ~Console() {
-        cout << "\033[?1049l" << flush;
+        cout << close_terminal << flush;
     }
 
   private:
     vector<Block> blocks;
-    /**
-     * @brief Recomputes total line count and redraws all blocks.
-     * @pre Internal block list is valid.
-     * @post lines equals total rendered block lines.
-     */
+    const string                        //
+        open_terminal = "\033[?1049h",  //
+        close_terminal = "\033[?1049l", //
+        clear_all = "\033[2J",          //
+        cursor_home = "\033[H";
+
     void refresh() {
         erase_all();
         move_cursor_top_left();
         print();
     }
 
-    /**
-     * @brief Prints all stacked blocks in order.
-     * @pre Output stream is writable.
-     * @post Visible console output matches stacked blocks.
-     */
     void print() const {
         for (const Block& block : blocks) {
             for (const string& line : block.text) {
@@ -269,69 +235,33 @@ class Console {
     }
 
     void erase_all() {
-        cout << "\033[2J";
+        cout << clear_all << flush;
     }
     void move_cursor_top_left() {
-        cout << "\033[H";
+        cout << cursor_home << flush;
     }
 };
-
-/**
- * @brief Represents the game board and tracks possible winning conditions for both
- * players.
- */
 class GameBoard {
   public:
-    /**
-     * @brief Constructs an empty 0x0 board placeholder.
-     * @post get_size() == 0.
-     */
     GameBoard() : GameBoard(0) {}
 
-    /**
-     * @brief Constructs an n x n game board with all cells empty.
-     * @param n Board size.
-     * @pre n >= 0.
-     * @post get_size() == n and every board cell is E.
-     */
     GameBoard(int n)
         : board(vector<vector<Cell>>(n, vector<Cell>(n, E))), //
           size(n),                                            //
           game_over(false) {}
 
-    /**
-     * @brief Returns the board dimension.
-     * @return Number of rows/columns in the board.
-     * @pre None.
-     */
     size_t get_size() const {
         return size;
     }
 
-    /**
-     * @brief Returns the first valid row label.
-     * @return Starting row label character.
-     * @pre None.
-     */
     char get_row_start_label() const {
         return ROW_LABEL_START;
     }
 
-    /**
-     * @brief Returns the first valid column label.
-     * @return Starting column number.
-     * @pre None.
-     */
     int get_col_start_label() const {
         return COL_LABEL_START;
     }
 
-    /**
-     * @brief Checks whether a row label is within board bounds.
-     * @param r Row label character to validate.
-     * @return true if r maps to a valid board row; otherwise false.
-     * @pre r is any char value.
-     */
     bool check_row_bounds(const char r) const {
         int row_index = r - ROW_LABEL_START;
         if (!(row_index >= 0)) return false;
@@ -339,12 +269,6 @@ class GameBoard {
         return true;
     }
 
-    /**
-     * @brief Checks whether a column label is within board bounds.
-     * @param c Column label number to validate.
-     * @return true if c maps to a valid board column; otherwise false.
-     * @pre c is any integer value.
-     */
     bool check_column_bounds(const int c) const {
         int col_index = c - COL_LABEL_START;
         if (!(col_index >= 0)) return false;
@@ -359,23 +283,32 @@ class GameBoard {
         return c - COL_LABEL_START;
     }
 
-    /**
-     * @brief Returns a move given a row and column
-     * @param row index, represents row of the board starting at top.
-     * @param column index, represents column of the board starting at left.
-     * @return Cell, either E, O or X.
-     * @pre row and column are within bounds.
-     */
+    string r_label(const size_t r) const {
+        return str(char(r + ROW_LABEL_START));
+    }
+
+    string c_label(const size_t c) const {
+        return to_string(c + COL_LABEL_START);
+    }
+
     Cell at(size_t row, size_t column) const {
         return board[row][column];
     }
 
-    void place(const Move& move) {
-        board[move.row][move.col] = move.symbol;
+    void place(const Move& move, Console& console, const PlayerType type, bool display = true) {
+        size_t r = move.row;
+        size_t c = move.col;
+
+        board[r][c] = move.symbol;
+        if (display) {
+            string message =
+                str(type) + " played " + str(move.symbol) + " at " + coords(r_label(r), c_label(c));
+            console.display(Block({"", message}), 2);
+        }
         game_over = check_win(move);
     }
 
-    bool is_game_over() const {
+    bool order_won() const {
         return game_over;
     }
 
@@ -498,21 +431,9 @@ Block::Block(const GameBoard* board) {
         add_line(row_separator);
     }
 }
-
-/**
- * @brief Represents a player in the game, which can be either a human or a computer.
- * Each player has a name and a type (ORDER or CHAOS).
- */
 class Player {
   public:
-    /**
-     * @brief Constructs a player with a name and role.
-     * @param name Player display name.
-     * @param type Player role (ORDER or CHAOS).
-     * @pre type is ORDER or CHAOS.
-     * @post Player stores the provided name and role.
-     */
-    Player(PlayerType type) : type(type) {}
+    Player(PlayerType type, const string& header) : type(type), display_header(header) {}
 
     PlayerType get_type() const {
         return type;
@@ -522,78 +443,44 @@ class Player {
         type = t;
     }
 
-    /**
-     * @brief Gets the player's move based on the current game board state. This is a
-     * pure virtual function that must be implemented by derived classes (Human and
-     * Computer).
-     * @param game_board The current game board.
-     * @param console Console renderer used for prompts and updates.
-     * @return The move chosen by the player.
-     * @pre Implementations must return a valid move.
-     */
-    virtual Move get_move(
-        const GameBoard* board, //
-        Console& console
-    ) = 0;
+    Move move(const GameBoard* board, Console& console) {
+        Move move = determine_move(board, console);
+        return move;
+    }
+
+    virtual Move determine_move(const GameBoard* board, Console& console) = 0;
+
+    virtual ~Player() {}
+
+  protected:
+    PlayerType type;
+    string display_header;
+};
+class Human : public Player {
+  public:
+    Human() = delete;
+
+    Human(PlayerType type) : Player(type, "you") {}
+
+    Move determine_move(const GameBoard* board, Console& console) override {
+        Move move(0, 0, X);
+        set_coords(move, board, console);
+        if (resigned) {
+            return move;
+        }
+        set_symbol(move, console);
+        return move;
+    }
 
     bool has_resigned() const {
         return resigned;
     }
 
-    virtual ~Player() = default;
-
-  protected:
-    bool resigned = false;
-    /**
-     * @brief Identifies whether a player is trying to create order or chaos.
-     */
-    PlayerType type;
-};
-
-/**
- * @brief Represents a human player in the game.
- */
-class Human : public Player {
-  public:
-    /**
-     * @brief Constructs a default human player named "Player" as ORDER.
-     * @post Human player is initialized with default identity.
-     */
-    Human() = delete;
-
-    /**
-     * @brief Constructs a human player with explicit identity.
-     * @param name Display name for the player.
-     * @param type Role for this player.
-     * @pre type is ORDER or CHAOS.
-     */
-    Human(PlayerType type) : Player(type) {}
-
-    /**
-     * @brief Collects a full move from console input.
-     * @param game_board Current board used to validate input.
-     * @param console Renderer for interactive prompts.
-     * @return A validated move with row, column, and symbol.
-     * @pre game_board has valid coordinate bounds.
-     */
-    Move get_move(const GameBoard* board, Console& console) override {
-        Move move(0, 0, X);
-        set_coords(move, board, console);
-        set_symbol(move, console);
-        return move;
-    }
-
     ~Human() {}
 
   private:
-    /**
-     * @brief Prompts until the user enters valid board coordinates.
-     * @param move Move object to update.
-     * @param game_board Board used for bounds validation.
-     * @param console Renderer for prompts and validation feedback.
-     * @pre move is writable.
-     * @post move.row and move.col contain valid zero-based indices.
-     */
+    bool resigned = false;
+
     void set_coords(
         Move& move,             //
         const GameBoard* board, //
@@ -662,14 +549,6 @@ class Human : public Player {
         move.col = col;
     }
 
-    /**
-     * @brief Prompts until the user enters a valid symbol (x or o).
-     * @param move Move object to update.
-     * @param game_board Current board context (reserved for future checks).
-     * @param console Renderer for prompts and validation feedback.
-     * @pre move is writable.
-     * @post move.symbol is set to X or O.
-     */
     void set_symbol(
         Move& move,      //
         Console& console //
@@ -700,33 +579,15 @@ class Human : public Player {
         move.symbol = cell;
     }
 };
-
-/**
- * @brief Represents a computer player in the game.
- */
 class Computer : public Player {
   public:
-    /**
-     * @brief Constructs a default computer player named "Computer" as CHAOS.
-     * @post Computer player is initialized with default identity.
-     */
     Computer() = delete;
 
-    /**
-     * @brief Constructs a computer player with explicit identity.
-     * @param name Display name for the player.
-     * @param type Role for this player.
-     * @pre type is ORDER or CHAOS.
-     */
-    Computer(PlayerType type) : Player(type), engine() {}
+    Computer(PlayerType type) : Player(type, "the computer"), engine() {}
 
-    Move get_move(const GameBoard* board, Console& console) override {
-        if (engine.board == nullptr) {
-            engine.board = board;
-        }
-        console.push(Block({"", "Computer is thinking..."}));
-        sleep(1);
-        console.pop();
+    Move determine_move(const GameBoard* board, Console& console) override {
+        engine.set_board(board);
+        console.display(Block({"", "Computer is thinking..."}), 1);
         return Move(0, 0, X);
     }
 
@@ -741,8 +602,8 @@ class Computer : public Player {
 
         BoardEngine(const GameBoard* board) : board(board) {}
 
-        bool is_board_set() const {
-            return board != nullptr;
+        void set_board(const GameBoard* b) {
+            board = b;
         }
 
         vector<Move> get_valid_moves() const {
@@ -761,43 +622,56 @@ class Computer : public Player {
             return available_moves;
         }
 
-        int evaluate(const GameBoard* board_state) const {
-            return evaluate_symbol(board_state, X) + evaluate_symbol(board_state, O);
+        int evaluate(const GameBoard* board) const {
+            return evaluate_symbol(board, X) + evaluate_symbol(board, O);
         }
 
       private:
-        int evaluate_symbol(const GameBoard* board_state, Cell symbol) const {
+        int evaluate_symbol(const GameBoard* board, Cell symbol) const {
+            int size = board->get_size();
+            vector<vector<vector<int>>> bounds = {
+                {{0, size - 1}, {0, size - 5}, {0, 1}},
+                {{0, size - 5}, {0, size - 1}, {1, 0}},
+                {{0, size - 5}, {0, size - 5}, {1, 1}},
+                {{0, size - 5}, {4, size - 1}, {1, -1}}
+            };
+
             int score = 0;
-            int size = board_state->get_size();
-
-            for (int r = 0; r <= size - 1; ++r) {
-                for (int c = 0; c + 4 <= size - 1; ++c) {
-                    score += calculate_score(board_state, symbol, r, c, 0, 1);
-                }
+            for (vector<vector<int>> bound : bounds) {
+                score += evaluate_direction(
+                    board,
+                    symbol,
+                    bound[0][0], // r_start
+                    bound[0][1], // r_end
+                    bound[1][0], // c_start
+                    bound[1][1], // c_end
+                    bound[2][0], // dr
+                    bound[2][1]  // dc
+                );
             }
-
-            for (int r = 0; r + 4 <= size - 1; ++r) {
-                for (int c = 0; c <= size - 1; ++c) {
-                    score += calculate_score(board_state, symbol, r, c, 1, 0);
-                }
-            }
-
-            for (int r = 0; r + 4 <= size - 1; ++r) {
-                for (int c = 0; c + 4 <= size - 1; ++c) {
-                    score += calculate_score(board_state, symbol, r, c, 1, 1);
-                }
-            }
-
-            for (int r = 0; r + 4 <= size - 1; ++r) {
-                for (int c = 0; c + 4 <= size - 1; ++c) {
-                    score += calculate_score(board_state, symbol, r, c + 4, 1, -1);
-                }
-            }
-
             return score;
         }
 
-        int calculate_score(
+        int evaluate_direction(
+            const GameBoard* board,
+            Cell symbol,
+            int r_start,
+            int r_end,
+            int c_start,
+            int c_end,
+            int dr,
+            int dc
+        ) const {
+            int score = 0;
+            for (int r = r_start; r <= r_end; ++r) {
+                for (int c = c_start; c <= c_end; ++c) {
+                    score += connected_score(board, symbol, r, c, dr, dc);
+                }
+            }
+            return score;
+        }
+
+        int connected_score(
             const GameBoard* board_state, //
             const Cell target,            //
             int r,                        //
@@ -824,30 +698,23 @@ class Computer : public Player {
                 return 0;
             }
 
-            return target_count == 0   ? 0     //
-                   : target_count == 1 ? 1     //
-                   : target_count == 2 ? 10    //
-                   : target_count == 3 ? 100   //
-                   : target_count >= 4 ? 10000 //
-                                       : 0;
+            vector<int> scores = {0, 1, 10, 100, 10000, 1000000};
+            if (target_count >= 0 && target_count <= scores.size() - 1) {
+                return scores[target_count];
+            }
+            return 0;
         }
     };
 
     BoardEngine engine;
-
-    void display_move(const Move& move, Console& console) {
-        console.push(Block({"", "Computer played " + str(move, engine.board)}));
-        sleep(2);
-        console.pop();
-    }
 };
 
 class RandomComputer : public Computer {
   public:
     RandomComputer(PlayerType type) : Computer(type) {}
 
-    Move get_move(const GameBoard* board, Console& console) override {
-        Computer::get_move(board, console);
+    Move determine_move(const GameBoard* board, Console& console) override {
+        Computer::determine_move(board, console);
         vector<Move> moves = engine.get_valid_moves();
 
         int num_moves = moves.size();
@@ -855,7 +722,6 @@ class RandomComputer : public Computer {
         Move move = moves[choice];
         move.symbol = (rand() % 2 == 0) ? X : O;
 
-        display_move(move, console);
         return move;
     }
 };
@@ -864,26 +730,25 @@ class SmartComputer : public Computer {
   public:
     SmartComputer(PlayerType type) : Computer(type) {}
 
-    Move get_move(const GameBoard* board, Console& console) override {
-        Computer::get_move(board, console);
+    Move determine_move(const GameBoard* board, Console& console) override {
+        Computer::determine_move(board, console);
         Move move(0, 0, X);
         if (type == ORDER) {
-            move = maximize_score();
+            move = maximize_score(console);
         } else {
-            move = minimize_score();
+            move = minimize_score(console);
         }
-        display_move(move, console);
         return move;
     }
 
   private:
-    Move maximize_score() {
+    Move maximize_score(Console& console) {
         vector<Move> moves = engine.get_valid_moves();
         int best_score = -1;
         Move best_move(0, 0, X);
         for (Move move : moves) {
             GameBoard board_copy = *engine.board;
-            board_copy.place(move);
+            board_copy.place(move, console, type, false);
             int score = engine.evaluate(&board_copy);
             if (score > best_score) {
                 best_score = score;
@@ -892,13 +757,13 @@ class SmartComputer : public Computer {
         }
         return best_move;
     }
-    Move minimize_score() {
+    Move minimize_score(Console& console) {
         vector<Move> moves = engine.get_valid_moves();
         int worst_score = 1000000000;
         Move worst_move(0, 0, X);
         for (Move move : moves) {
             GameBoard board_copy = *engine.board;
-            board_copy.place(move);
+            board_copy.place(move, console, type, false);
             int score = engine.evaluate(&board_copy);
             if (score < worst_score) {
                 worst_score = score;
@@ -907,31 +772,18 @@ class SmartComputer : public Computer {
         }
         return worst_move;
     }
-
-    const int SEARCH_DEPTH = 5;
 };
-
-/**
- * @brief Represents the main game logic, including the game loop, and
- * player turns.
- */
 class Game {
   public:
-    /**
-     * @brief Constructs a new game controller.
-     * @post Game object is ready for initialization via play/start.
-     */
     Game()
-        : board(nullptr),    //
-          player1(nullptr),  //
-          player2(nullptr),  //
-          order(nullptr),    //
-          chaos(nullptr),    //
-          human(nullptr),    //
-          computer(nullptr), //
-          console(),         //
-          console_board(0),  //
-          winner(nullptr) {}
+        : board(nullptr),                    //
+          human(nullptr), computer(nullptr), //
+          winner(nullptr),                   //
+          first(nullptr), second(nullptr),   //
+          order(nullptr), chaos(nullptr),    //
+          console(),                         //
+          console_board(0)                   //
+    {}
 
     void play() {
         title();
@@ -939,104 +791,49 @@ class Game {
         while (true) {
             setup_game();
             cycle_turns();
-            confirm({"Game over! " + str(winner->get_type()) + " wins!"});
-            if (!end()) {
-                break;
-            }
-        }
-    }
+            confirm({str(winner->get_type()) + " wins!"});
 
-    ~Game() {
-        delete board;
-        delete player1;
-        delete player2;
-    }
-
-  private:
-    GameBoard* board;
-    Player *player1, *player2;
-    Player *order, *chaos;
-    Human* human;
-    Computer* computer;
-    Console console;
-    size_t console_board;
-    Player* winner;
-
-    /**
-     * @brief Initializes the game and prints player instructions.
-     * @pre Game object exists.
-     * @post Board has been configured by user input.
-     */
-    void setup_game() {
-
-        setup_board();
-        setup_players();
-        setup_console();
-    }
-
-    void cycle_turns() {
-        while (true) {
-            if (turn(player1)) {
-                winner = player1;
-                break;
-            }
-            if (turn(player2)) {
-                winner = player2;
-                break;
-            }
-        }
-    }
-
-    /**
-     * @brief Executes one turn for the active player.
-     * @param player The player taking this turn.
-     * @pre player is a valid initialized Player object.
-     * @post A move is requested from player.
-     */
-    Player* turn(Player* player) {
-
-        if (player->has_resigned()) {
-            return player == order ? chaos : order;
-        }
-
-        Move move = player->get_move(board, console);
-        board->place(move);
-        console.overwrite(console_board, board);
-        if (board->is_game_over()) {
-            return order;
-        }
-        if (board->is_full()) {
-            return chaos;
-        }
-        return nullptr;
-    }
-
-    /**
-     * @brief Handles end-of-game logic.
-     * @return true to start another game, false to stop.
-     * @post Return value controls whether play() repeats.
-     */
-    bool end() {
-        Block prompt({"", "Play again? (y) or (n)"});
-        string input;
-        while (true) {
-            stringstream ss = console.ask(prompt);
-            ss >> input;
-
-            if (ss.fail()) {
-                prompt.text[0] = "Invalid input.";
-                continue;
-            }
-
-            input = to_lower(input[0]);
-
-            if (!(input == "y" || input == "n")) {
-                prompt.text[0] = quote(input) + " is not a valid choice. ";
+            if (end()) {
+                cleanup();
                 continue;
             }
             break;
         }
-        return input == "y";
+    }
+
+    ~Game() {
+        cleanup();
+    }
+
+  private:
+    GameBoard* board;
+
+    Human* human;
+    Computer* computer;
+
+    Player* winner;
+    Player *first, *second;
+    Player *order, *chaos;
+
+    Console console;
+    size_t console_board;
+
+    void cleanup() {
+        delete board;
+        board = nullptr;
+
+        delete human;
+        delete computer;
+        human = nullptr;
+        computer = nullptr;
+
+        first = nullptr;
+        second = nullptr;
+
+        winner = nullptr;
+
+        console.clear();
+        console_board = 0;
     }
 
     void confirm(const Block& b) {
@@ -1065,11 +862,6 @@ class Game {
         });
     }
 
-    /**
-     * @brief Shows opening instructions and waits for Enter.
-     * @pre Console I/O is available.
-     * @post Intro text has been displayed and dismissed.
-     */
     void introduction() {
         confirm(
             {"Welcome to Order and Chaos!",
@@ -1080,11 +872,12 @@ class Game {
         );
     }
 
-    /**
-     * @brief Prompts for and validates board size.
-     * @pre Console I/O is available.
-     * @post game_board is set to a size between 6 and 9.
-     */
+    void setup_game() {
+        setup_board();
+        setup_players();
+        setup_console();
+    }
+
     void setup_board() {
         Block prompt({"", "Enter a board size from (6) to (9)"});
         int size;
@@ -1107,76 +900,74 @@ class Game {
         board = new GameBoard(size);
     }
 
-    Computer* set_computer_difficulty(const PlayerType type) {
-        Computer* computer = nullptr;
+    void setup_players() {
+        setup_human_computer();
+        setup_order_chaos();
+        setup_move_order();
 
+        string first_name = first == human ? "You" : "The computer";
+        confirm(
+            {"You are playing as " + str(human->get_type()) + ". The computer is playing as " +
+                 str(computer->get_type()) + ".",
+             first_name + " will go first."}
+        );
+    }
+
+    void setup_human_computer() {
+        int num = rand() % 2;
+        PlayerType human_type = num == 0 ? ORDER : CHAOS;
+        PlayerType computer_type = num == 0 ? CHAOS : ORDER;
+
+        human = new Human(human_type);
+        if (get_computer_difficulty() == RANDOM) {
+            computer = new RandomComputer(computer_type);
+        } else {
+            computer = new SmartComputer(computer_type);
+        }
+    }
+
+    void setup_order_chaos() {
+        if (human->get_type() == ORDER) {
+            order = human;
+            chaos = computer;
+        } else {
+            order = computer;
+            chaos = human;
+        }
+    }
+
+    void setup_move_order() {
+        int num = rand() % 2;
+
+        if (num == 0) {
+            first = human;
+            second = computer;
+        } else {
+            first = computer;
+            second = human;
+        }
+    }
+
+    ComputerDifficulty get_computer_difficulty() {
         Block prompt({"", "Please choose difficulty: (1) Random, (2) Smart"});
-        int choice;
+        int num;
         while (true) {
             stringstream input = console.ask(prompt);
 
-            input >> choice;
+            input >> num;
 
             if (input.fail()) {
                 prompt.text[0] = "Invalid input.";
                 continue;
             }
 
-            if (!(choice == 1 || choice == 2)) {
-                prompt.text[0] = quote(to_string(choice)) + " is not a valid choice.";
+            if (!(num == 1 || num == 2)) {
+                prompt.text[0] = quote(to_string(num)) + " is not a valid choice.";
                 continue;
             }
             break;
         }
-        if (choice == 1) {
-            computer = new RandomComputer(type);
-        } else {
-            computer = new SmartComputer(type);
-        }
-        return computer;
-    }
-
-    /**
-     * @brief Randomly assigns player order between human and computer.
-     * @pre human and computer players are initialized.
-     * @post player1 and player2 point to different player objects.
-     */
-    void setup_players() {
-        int num = rand() % 2;
-        PlayerType p1_type;
-        PlayerType p2_type;
-
-        if (num == 0) {
-            p1_type = ORDER;
-            p2_type = CHAOS;
-            order = player1;
-            chaos = player2;
-        } else {
-            p1_type = CHAOS;
-            p2_type = ORDER;
-            order = player2;
-            chaos = player1;
-        }
-
-        num = rand() % 2;
-        if (num == 0) {
-            human = new Human(p1_type);
-            computer = set_computer_difficulty(p2_type);
-            player1 = human;
-            player2 = computer;
-        } else {
-            computer = set_computer_difficulty(p1_type);
-            human = new Human(p2_type);
-            player1 = computer;
-            player2 = human;
-        }
-
-        string first = num == 0 ? "You" : "The computer";
-        confirm(
-            {"You are playing as " + str(p2_type) + ". The computer is playing as " + str(p1_type) +
-                 ".",
-             first + " will go first."}
-        );
+        return num == 1 ? RANDOM : SMART;
     }
 
     void setup_console() {
@@ -1184,15 +975,149 @@ class Game {
         console_board = console.size() - 1;
         console.push({""});
     }
-};
 
-/**
- * @brief Program entry point.
- * @return Exit status code from the process.
- * @post Game session is run until completion.
- */
+    void cycle_turns() {
+        while (true) {
+            if (turn(first)) return;
+            if (turn(second)) return;
+        }
+    }
+
+    bool turn(Player* player) {
+        Move move = player->move(board, console);
+
+        if (player == human && human->has_resigned()) {
+            winner = computer;
+            return true;
+        }
+
+        board->place(move, console, player->get_type());
+        console.overwrite(console_board, Block(board));
+
+        if (board->order_won()) {
+            winner = order;
+            return true;
+        }
+        if (board->is_full()) {
+            winner = chaos;
+            return true;
+        }
+        return false;
+    }
+
+    bool end() {
+        Block prompt({"", "Play again? (y) or (n)"});
+        string input;
+        while (true) {
+            stringstream ss = console.ask(prompt);
+            ss >> input;
+
+            if (ss.fail()) {
+                prompt.text[0] = "Invalid input.";
+                continue;
+            }
+
+            input = to_lower(input[0]);
+
+            if (!(input == "y" || input == "n")) {
+                prompt.text[0] = quote(input) + " is not a valid choice. ";
+                continue;
+            }
+            break;
+        }
+        return input == "y";
+    }
+};
 int main() {
     srand(time(nullptr));
     Game game;
     game.play();
 } // main
+
+/*
+Assignment 5 Report
+===================
+
+Description of Computers Playing Strategy
+-----------------------------------------
+Both computer are built upon an BoardEngine class that has methods that return possible moves and
+evaluates the current board state for how "winnable" it is for Order. It does this by scanning every
+possible 5-in a row and seeing how filled in they are and sums up weights to generate an integer
+score.
+
+RandomComputer
+- This computer plays random moves from a vector of available moves on the board. This bot is good
+if you want to debug.
+
+SmartComputer
+- This computer simulates all possible moves and uses the engine to evaluate all the future possible
+boards to determine the move that creates the most favorable position.
+
+
+
+Extra Features
+--------------
+1. Console Class
+- This is a custom-built class that handles all I/O for the user, It stores a stack of string blocks
+for all content displayed on screen and updates them by erasing then reprinting everything using
+ASCII escape codes.
+- It allows complex UI structures and efficient handling combined with stringstream.
+- It was probably the most challenging aspect of this project and took several versions to get right
+reliably.
+- It allows the code to print, remove, overwrite, and take in user input all together all within
+itself.
+
+2. GameBoard Class
+- Stores a 2d vector matrix of Cells that represent the current game state.
+- It handles move placement and win checking efficiently in O(1) time
+- Checks whether the last move made by players was a winning move.
+
+3. Game Class
+- Handles game setup
+- Handles game end
+- Handles turn cycling
+
+Class Hierarchy:
+
+4. Player Class
+    5. Human Class
+    - Handles user input within itself
+
+    6. Computer Class
+        7. Smart Computer
+            - Refer to Playing strategy
+
+        8. Random Computer
+            - Refer to Playing strategy
+
+
+Known Bugs and Limitations
+--------------------------
+- Please ensure the terminal window is tall enough to show the entire game. The Console class should
+theoretically handle window cutoffs without issue but there may still be unknown bugs.
+- Only type input when prompted and don't spam characters when text is being displayed. All prompts
+start with a "| " and end with a ">". The code attempts to clean out stream buffers but it is not
+completely reliable yet.
+- Extra trailing input is disregarded by design, so input such as "a4someextratext" will still be
+parsed as "a4".
+
+Acknowledgements of All Help
+----------------------------
+- You can view this project's GitHub at https://github.com/Tolly-Zhang/order-and-chaos which shows
+the entire commit history. Most edits were made on one machine while collaborating using VS Code
+Live Share.
+- The project utilizes clang-format, a C++ linter, any extra trailing //s are used to aid in its
+formatting.
+
+SOURCES
+1. https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797 for ASCII escape codes.
+2. https://en.cppreference.com/w/cpp/io/manip/flush.html for cout << flush.
+3. https://www.w3schools.com/cpp/cpp_enum.asp for enums.
+4. https://en.cppreference.com/w/cpp/types/size_t.html for appropriate size_t usage.
+5. https://www.geeksforgeeks.org/cpp/stringstream-c-applications/ for stringstream usage.
+6. https://www.w3schools.com/cpp/ref_keyword_protected.asp for protected members in classes
+7. https://cplusplus.com/reference/streambuf/streambuf/in_avail/ for stream buffer clearing
+7. https://en.cppreference.com/w/cpp/language/lambda.html for lamdas
+8. https://pubs.opengroup.org/onlinepubs/009696799/functions/sleep.html for sleep()
+9. https://en.cppreference.com/w/cpp/language/function.html#Deleted_functions for deleted functions
+*/
